@@ -200,6 +200,7 @@ class DatabaseManager:
     ) -> bool:
         """
         Updates complaint status and adds a tracking log in status_history.
+        Prevents duplicate status-history entries when the status is unchanged.
         Also handles resolution timestamp when status becomes Resolved or Closed.
         """
         current = self.get_complaint(complaint_id)
@@ -240,14 +241,17 @@ class DatabaseManager:
             cursor = conn.cursor()
             cursor.execute(update_query, tuple(update_params))
 
-            cursor.execute(
-                """
-                INSERT INTO status_history (
-                    complaint_id, old_status, new_status, changed_by, comment, changed_at
-                ) VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (complaint_id, old_status, new_status, changed_by, comment, now)
-            )
+            # Only create a history entry when the status actually changes.
+            if new_status != old_status:
+                cursor.execute(
+                    """
+                    INSERT INTO status_history (
+                        complaint_id, old_status, new_status, changed_by, comment, changed_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (complaint_id, old_status, new_status, changed_by, comment, now)
+                )
+
             conn.commit()
 
         return True
