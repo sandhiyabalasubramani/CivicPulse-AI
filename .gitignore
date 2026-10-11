@@ -1,17 +1,45 @@
-# Python
+# Python & Caches
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+.pytest_cache/
+.coverage
+htmlcov/
+.cache/
+.ruff_cache/
+.mypy_cache/
 
-# Virtual environments
+# Virtual Environments
 env/
 venv/
 ENV/
 .venv/
+env.bak/
+venv.bak/
 
-# Build / packaging
+# Environment Files & Secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.cert
+*secrets*.toml
+.streamlit/secrets.toml
+
+# Databases & Backups
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+civicpulse.db
+civicpulse_backup_before_postgresql.db
+
+# Build & Packaging
 build/
 develop-eggs/
 dist/
@@ -28,27 +56,13 @@ wheels/
 .installed.cfg
 *.egg
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Environment & IDE
-.env
+# IDE & Editor Files
 .idea/
 .vscode/
+.vs/
 *.swp
 *.swo
 
-# Local SQLite databases
-civicpulse.db
-*.sqlite3
-*.db-journal
-civicpulse_backup_before_postgresql.db
-
-# Streamlit
-.streamlit/secrets.toml
-
-# OS files
+# OS Files
 Thumbs.db
 .DS_Store

@@ -1,212 +1,513 @@
-"""
-Complaint Submission View for CivicPulse AI.
-Allows users to submit complaints with real-time NLP analysis,
-TF-IDF duplicate detection, and immediate docket confirmation.
-"""
-
+import requests
 import streamlit as st
 from datetime import datetime
-from database.database import get_db
-from modules.complaint_analyzer import get_analyzer, CATEGORY_TAXONOMY
-from modules.priority_engine import get_priority_engine
-from modules.similarity_engine import get_similarity_engine
-from modules.department_router import get_department_router
+
 from utils.validators import validate_complaint_form
-from utils.ui_components import (
-    render_header,
-    get_priority_badge_html,
-    get_status_badge_html
-)
+from utils.api_client import API_URL
 
 
 def render_submit_view():
-    """Renders the complaint submission form and post-submission results."""
-    render_header(
-        title="Submit a Grievance or Maintenance Request",
-        subtitle="Our AI-assisted platform analyzes your issue, determines urgency, routes to the right team, and detects duplicates.",
-        icon="📝"
+
+    st.markdown(
+        """
+        <div class="civic-title">
+            Submit Complaint
+        </div>
+        <div class="civic-subtitle">
+            Submit a grievance and let CivicPulse AI analyze, prioritize,
+            categorize and route it automatically.
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-    db = get_db()
-    analyzer = get_analyzer()
-    priority_engine = get_priority_engine()
-    similarity_engine = get_similarity_engine()
-    router = get_department_router()
+    st.markdown("---")
 
-    # Form Container
-    with st.form("complaint_submission_form", clear_on_submit=False):
-        st.markdown("#### 👤 Complainant Information")
+    with st.form("complaint_form"):
+
+        st.subheader("Complainant Details")
+
         col1, col2 = st.columns(2)
-        with col1:
-            name = st.text_input("Full Name *", placeholder="e.g. Dr. Ramesh Sharma or Priya V", help="Your official name for ticket tracking.")
-        with col2:
-            email = st.text_input("Email Address *", placeholder="e.g. user@institution.edu", help="We will use this email for status tracking.")
 
-        st.markdown("#### 📍 Incident Location & Details")
+        with col1:
+            name = st.text_input(
+                "Name *",
+                placeholder="Enter your name"
+            )
+
+        with col2:
+            email = st.text_input(
+                "Email *",
+                placeholder="example@gmail.com"
+            )
+
         location = st.text_input(
-            "Specific Location *",
-            placeholder="e.g. EEE Lab 2, Electrical Block 2nd Floor / Room 304",
-            help="Building, Block, Lab, Floor, or Room number where the issue is located."
+            "Location *",
+            placeholder="Example: Karur Campus"
         )
+
+        st.subheader("Complaint Details")
 
         title = st.text_input(
             "Complaint Title *",
-            placeholder="e.g. Three ceiling fans not working in EEE Lab 2",
-            help="Brief summary of the issue."
+            placeholder="Example: Street light not working"
         )
 
         description = st.text_area(
-            "Detailed Description *",
-            placeholder="Please describe what happened, what equipment is affected, the impact on students/staff, and any safety hazards...",
-            height=130,
-            help="Detailed description helps our NLP engine accurately classify category and evaluate priority."
+            "Complaint Description *",
+            placeholder="Describe the issue clearly...",
+            height=150
         )
 
-        st.markdown("#### ⚙️ Optional Overrides (Leave on Auto-Detect for AI Assistance)")
-        col_cat, col_dept = st.columns(2)
-        
-        category_options = ["Auto-Detect"] + list(CATEGORY_TAXONOMY.keys())
-        all_depts = ["Auto-Assign"] + router.get_all_departments()
+        category_options = [
+            "Auto-Detect",
+            "Security & Safety",
+            "Electrical",
+            "Infrastructure & Civil",
+            "Equipment & Machinery",
+            "Network & IT",
+            "Cleaning & Sanitation",
+            "Water & Plumbing"
+        ]
 
-        with col_cat:
-            selected_category = st.selectbox(
-                "Category (Optional)",
-                options=category_options,
-                index=0,
-                help="Let our NLP system auto-detect the category, or select manually if you prefer."
+        category = st.selectbox(
+            "Category",
+            category_options
+        )
+
+        department_options = [
+            "Auto-Assign",
+            "Campus Security & Safety Division",
+            "Electrical Maintenance Division",
+            "Infrastructure & Civil Division",
+            "Equipment & Machinery Division",
+            "Network & IT Division",
+            "Cleaning & Sanitation Division",
+            "Water & Plumbing Division"
+        ]
+
+        department = st.selectbox(
+            "Department",
+            department_options
+        )
+
+        submitted = st.form_submit_button(
+            "Submit Complaint",
+            use_container_width=True
+        )
+
+    if not submitted:
+        return
+
+    complaint_data = {
+        "name": name.strip(),
+        "email": email.strip(),
+        "location": location.strip(),
+        "title": title.strip(),
+        "description": description.strip(),
+        "category": category if category != "Auto-Detect" else ""
+    }
+
+    is_valid, validation_message = validate_complaint_form(
+        complaint_data
+    )
+
+    if not is_valid:
+        st.error(validation_message)
+        return
+
+    payload = {
+        "name": name.strip(),
+        "email": email.strip(),
+        "location": location.strip(),
+        "title": title.strip(),
+        "description": description.strip(),
+        "category": category,
+        "department": department
+    }
+
+    with st.spinner("CivicPulse AI is analyzing your complaint..."):
+
+        try:
+
+            api_response = requests.post(
+                f"{API_URL}/complaints",
+                json=payload,
+                timeout=15
             )
 
-        with col_dept:
-            selected_department = st.selectbox(
-                "Department (Optional)",
-                options=all_depts,
-                index=0,
-                help="Let our system route automatically, or specify a destination department."
+            if api_response.status_code not in [200, 201]:
+
+                st.error(
+                    f"Backend rejected the complaint "
+                    f"(HTTP {api_response.status_code})"
+                )
+
+                try:
+                    st.json(api_response.json())
+                except Exception:
+                    st.code(api_response.text)
+
+                return
+
+            api_data = api_response.json()
+
+        except requests.exceptions.ConnectionError:
+
+            st.error(
+                "FastAPI backend is not running.\n\n"
+                "Start it with:\n"
+                "uvicorn backend.main:app --reload"
             )
 
-        submitted = st.form_submit_button("🚀 Submit & Analyze Complaint", use_container_width=True, type="primary")
-
-    if submitted:
-        form_payload = {
-            "name": name,
-            "email": email,
-            "location": location,
-            "title": title,
-            "description": description
-        }
-
-        # 1. Validate Form Inputs
-        is_valid, err_msg = validate_complaint_form(form_payload)
-        if not is_valid:
-            st.error(f"⚠️ **Validation Error:** {err_msg}")
             return
 
-        with st.spinner("Analyzing complaint text, computing TF-IDF similarity vectors, and routing..."):
-            # 2. NLP Analysis (Category & Subcategory)
-            nlp_result = analyzer.analyze(
-                title=title,
-                description=description,
-                user_category=selected_category
+        except requests.exceptions.Timeout:
+
+            st.error(
+                "FastAPI backend request timed out."
             )
 
-            # 3. Priority Evaluation
-            priority_result = priority_engine.evaluate(
-                title=title,
-                description=description,
-                category=nlp_result["category"]
+            return
+
+        except requests.exceptions.RequestException as e:
+
+            st.error(
+                f"Backend connection error: {e}"
             )
 
-            # 4. Department Routing & SLA
-            routing_result = router.route(
-                category=nlp_result["category"],
-                subcategory=nlp_result["subcategory"],
-                user_department=selected_department
+            return
+
+        except Exception as e:
+
+            st.error(
+                f"Unexpected error: {e}"
             )
 
-            # 5. TF-IDF & Cosine Similarity Check against existing complaints in SQLite
-            existing_records = db.get_complaints_for_similarity()
-            similarity_result = similarity_engine.find_similar(
-                new_title=title,
-                new_description=description,
-                existing_complaints=existing_records,
-                new_location=location,
-                top_k=3
+            return
+
+    if api_data.get("status") != "success":
+
+        st.error(
+            api_data.get(
+                "message",
+                "Complaint submission failed."
             )
+        )
 
-            # 6. Save Complaint to SQLite
-            new_record = {
-                "name": name.strip(),
-                "email": email.strip().lower(),
-                "location": location.strip(),
-                "title": title.strip(),
-                "description": description.strip(),
-                "category": nlp_result["category"],
-                "subcategory": nlp_result["subcategory"],
-                "priority": priority_result["priority"],
-                "priority_reason": priority_result["primary_reason"],
-                "department": routing_result["department"],
-                "status": "Pending",
-                "similar_count": similarity_result["similar_count"],
-                "top_similar_id": similarity_result["top_complaint_id"],
-                "top_similarity_score": similarity_result["top_score"],
-            }
+        return
 
-            complaint_id = db.insert_complaint(new_record)
+    # ---------------------------------------------------------
+    # Read all AI results directly from FastAPI
+    # ---------------------------------------------------------
 
-        # 7. Render Confirmation Card
-        st.success(f"🎉 **Complaint Successfully Registered! Reference ID: `{complaint_id}`**")
+    complaint_id = api_data.get("complaint_id", "CP-PENDING")
 
-        st.markdown(f"""
-            <div class="cp-ai-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px; margin-bottom: 12px;">
-                    <span style="font-weight: 800; font-size: 1.1rem; color: #1E293B;">Complaint Docket &bull; {complaint_id}</span>
-                    <div>
-                        {get_status_badge_html("Pending")}
-                        &nbsp;
-                        {get_priority_badge_html(priority_result["priority"])}
-                    </div>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 0.9rem;">
-                    <div><b>Category:</b> {nlp_result["category"]}</div>
-                    <div><b>Subcategory:</b> {nlp_result["subcategory"]}</div>
-                    <div><b>Assigned Department:</b> {routing_result["department"]}</div>
-                    <div><b>Target SLA:</b> {routing_result["sla_hours"]} hours</div>
-                    <div><b>Location:</b> {location}</div>
-                    <div><b>Submitter:</b> {name} ({email})</div>
-                </div>
-                <div style="margin-top: 10px; font-size: 0.85rem; color: #475569;">
-                    <b>Priority Signal:</b> {priority_result["primary_reason"]}
-                </div>
-                <div style="margin-top: 8px; font-size: 0.82rem; color: #64748B;">
-                    <b>Extracted Keywords:</b> {', '.join([f'<code>{k}</code>' for k in nlp_result['keywords']]) if nlp_result['keywords'] else 'None'}
-                </div>
+    analysis = api_data.get("analysis", {})
+    priority_result = api_data.get("priority", {})
+    routing_result = api_data.get("routing", {})
+    similarity_result = api_data.get("similarity", {})
+
+    detected_category = analysis.get(
+        "category",
+        category
+    )
+
+    subcategory = analysis.get(
+        "subcategory",
+        ""
+    )
+
+    priority = priority_result.get(
+        "priority",
+        "Medium"
+    )
+
+    priority_score = priority_result.get(
+        "score",
+        50
+    )
+
+    priority_reason = priority_result.get(
+        "primary_reason",
+        ""
+    )
+
+    assigned_department = routing_result.get(
+        "department",
+        department
+    )
+
+    routing_type = routing_result.get(
+        "routing_type",
+        ""
+    )
+
+    sla_hours = routing_result.get(
+        "sla_hours",
+        ""
+    )
+
+    similar_count = similarity_result.get(
+        "similar_count",
+        0
+    )
+
+    top_similar_id = similarity_result.get(
+        "top_complaint_id",
+        ""
+    )
+
+    top_similarity_score = similarity_result.get(
+        "top_score",
+        0
+    )
+
+    new_record = {
+        "reference_id": complaint_id,
+        "name": name.strip(),
+        "email": email.strip(),
+        "location": location.strip(),
+        "title": title.strip(),
+        "description": description.strip(),
+        "category": detected_category,
+        "subcategory": subcategory,
+        "priority": priority,
+        "department": assigned_department,
+        "status": "Pending",
+        "created_at": datetime.now().isoformat()
+    }
+
+    st.session_state["last_complaint"] = new_record
+
+    # ---------------------------------------------------------
+    # Success
+    # ---------------------------------------------------------
+
+    st.success(
+        "Complaint submitted successfully!"
+    )
+
+    st.markdown(
+        f"""
+        <div class="cp-ai-card">
+
+            <h3>Complaint Registered</h3>
+
+            <p>
+                <b>Complaint ID:</b>
+                {complaint_id}
+            </p>
+
+            <p>
+                <b>Category:</b>
+                {detected_category}
+            </p>
+
+            <p>
+                <b>Subcategory:</b>
+                {subcategory}
+            </p>
+
+            <p>
+                <b>Priority:</b>
+                {priority}
+            </p>
+
+            <p>
+                <b>Department:</b>
+                {assigned_department}
+            </p>
+
+            <p>
+                <b>Status:</b>
+                Pending
+            </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ---------------------------------------------------------
+    # AI Analysis
+    # ---------------------------------------------------------
+
+    st.subheader("AI Analysis")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Category",
+            detected_category
+        )
+
+    with col2:
+        st.metric(
+            "Priority",
+            priority
+        )
+
+    with col3:
+        st.metric(
+            "Status",
+            "Pending"
+        )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Priority Score",
+            priority_score
+        )
+
+    with col2:
+        st.metric(
+            "SLA",
+            f"{sla_hours} hours"
+            if sla_hours
+            else "N/A"
+        )
+
+    with col3:
+        st.metric(
+            "Similar Complaints",
+            similar_count
+        )
+
+    # ---------------------------------------------------------
+    # Priority Reason
+    # ---------------------------------------------------------
+
+    if priority_reason:
+
+        st.info(
+            f"Priority Reason: {priority_reason}"
+        )
+
+    # ---------------------------------------------------------
+    # Routing Information
+    # ---------------------------------------------------------
+
+    st.subheader("Department Routing")
+
+    st.write(
+        f"**Assigned Department:** {assigned_department}"
+    )
+
+    if routing_type:
+        st.write(
+            f"**Routing Type:** {routing_type}"
+        )
+
+    if sla_hours:
+        st.write(
+            f"**Service Level Agreement:** {sla_hours} hours"
+        )
+
+    if routing_result.get("contact_email"):
+        st.write(
+            f"**Department Contact:** "
+            f"{routing_result['contact_email']}"
+        )
+
+    # ---------------------------------------------------------
+    # Similarity / Duplicate Detection
+    # ---------------------------------------------------------
+
+    if similar_count > 0:
+
+        st.markdown(
+            """
+            <div class="cp-similarity-box">
+                <h4>Similar Complaints Detected</h4>
             </div>
-        """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True
+        )
 
-        # 8. Render Similarity Warnings if detected
-        if similarity_result["has_similar"]:
-            st.markdown(f"""
-                <div class="cp-similarity-box">
-                    <div style="font-weight: 700; color: #92400E; font-size: 0.95rem; margin-bottom: 4px;">
-                        ⚠️ Potential Similar / Duplicate Complaints Found ({similarity_result['similar_count']})
-                    </div>
-                    <div style="font-size: 0.85rem; color: #78350F; margin-bottom: 8px;">
-                        Our TF-IDF & Cosine Similarity engine detected potential semantic overlap with existing tickets in the system.
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+        st.warning(
+            f"{similar_count} similar complaint(s) detected."
+        )
 
-            for sim in similarity_result["matches"]:
-                with st.expander(f"🔍 Similar Complaint: {sim['complaint_id']} — '{sim['title']}' ({sim['similarity_percentage']}% Match)", expanded=False):
-                    c1, c2 = st.columns([3, 1])
-                    with c1:
-                        st.write(f"**Description:** {sim['description']}")
-                        st.caption(f"📍 Location: {sim['location']} | 🏷️ Category: {sim['category']} | 📅 Created: {sim['created_at']}")
-                    with c2:
-                        st.markdown(f"Status: {get_status_badge_html(sim['status'])}", unsafe_allow_html=True)
-                        st.markdown(f"Priority: {get_priority_badge_html(sim['priority'])}", unsafe_allow_html=True)
-                        st.metric("Similarity", f"{sim['similarity_percentage']}%")
-        else:
-            st.info("💡 **Similarity Analysis:** No historical duplicate or closely matching complaints found for this issue.")
+        if top_similar_id:
+            st.write(
+                f"**Closest Complaint:** {top_similar_id}"
+            )
 
-        st.caption("ℹ️ You can track the live status and audit trail of this complaint anytime using the **Track Complaint** page.")
+        if isinstance(top_similarity_score, (int, float)):
+            st.write(
+                f"**Similarity Score:** "
+                f"{float(top_similarity_score):.1%}"
+            )
+
+    # ---------------------------------------------------------
+    # Complaint Docket
+    # ---------------------------------------------------------
+
+    st.markdown("---")
+
+    st.subheader("Complaint Docket")
+
+    st.markdown(
+        f"""
+        <div class="cp-ai-card">
+
+            <h3>CivicPulse AI Docket</h3>
+
+            <p>
+                <b>Complaint ID:</b>
+                {complaint_id}
+            </p>
+
+            <p>
+                <b>Name:</b>
+                {name}
+            </p>
+
+            <p>
+                <b>Location:</b>
+                {location}
+            </p>
+
+            <p>
+                <b>Title:</b>
+                {title}
+            </p>
+
+            <p>
+                <b>Category:</b>
+                {detected_category}
+            </p>
+
+            <p>
+                <b>Subcategory:</b>
+                {subcategory}
+            </p>
+
+            <p>
+                <b>Priority:</b>
+                {priority}
+            </p>
+
+            <p>
+                <b>Department:</b>
+                {assigned_department}
+            </p>
+
+            <p>
+                <b>Status:</b>
+                Pending
+            </p>
+
+            <p>
+                <b>Created:</b>
+                {datetime.now().strftime("%d-%m-%Y %H:%M")}
+            </p>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )

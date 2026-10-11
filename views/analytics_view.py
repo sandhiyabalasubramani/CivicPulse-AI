@@ -9,7 +9,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from database.database import get_db
+from utils.api_client import api_client
 from utils.ui_components import render_header, render_metric_card
 
 
@@ -22,13 +22,23 @@ def render_analytics_view():
         icon="📊"
     )
 
-    db = get_db()
-    df = db.get_all_complaints()
+    if not api_client.check_health():
+        st.error(
+            f"⚠️ Unable to connect to CivicPulse AI backend service ({api_client.base_url}). "
+            "Please ensure the FastAPI service is running."
+        )
+        return
+
+    try:
+        df = api_client.get_all_complaints()
+    except Exception as e:
+        st.error(f"⚠️ Failed to retrieve complaints from backend: {str(e)}")
+        return
 
     if df.empty:
         st.info(
             "ℹ️ No complaint records found in database. "
-            "Seed sample data from the sidebar to explore analytics."
+            "Seed sample data or submit complaints to explore analytics."
         )
         return
 
@@ -346,7 +356,9 @@ def render_analytics_view():
     st.markdown("### 📅 Grievance Logging & Resolution Trends Over Time")
 
     df["date_only"] = pd.to_datetime(
-        df["created_at"]
+        df["created_at"],
+        format="mixed",
+        errors="coerce"
     ).dt.date
 
     time_trend = (

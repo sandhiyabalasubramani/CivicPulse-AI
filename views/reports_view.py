@@ -9,7 +9,7 @@ Enables generation and instant download of:
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from database.database import get_db
+from utils.api_client import api_client
 from modules.report_generator import create_complaint_docket_pdf, create_summary_analytics_pdf
 from utils.ui_components import render_header, render_metric_card
 
@@ -22,8 +22,18 @@ def render_reports_view():
         icon="📑"
     )
 
-    db = get_db()
-    df = db.get_all_complaints()
+    if not api_client.check_health():
+        st.error(
+            f"⚠️ Unable to connect to CivicPulse AI backend service ({api_client.base_url}). "
+            "Please ensure the FastAPI service is running."
+        )
+        return
+
+    try:
+        df = api_client.get_all_complaints()
+    except Exception as e:
+        st.error(f"⚠️ Failed to retrieve complaints from backend: {str(e)}")
+        return
 
     if df.empty:
         st.info("ℹ️ No complaint records found. Please seed sample data or submit complaints to generate reports.")
@@ -40,7 +50,11 @@ def render_reports_view():
         st.markdown("#### 🏛️ Executive Resolution & Hotspot Summary PDF")
         st.write("Generates an official management summary detailing institutional resolution rates, department workloads, category distributions, and problem hotspots.")
 
-        kpis = db.get_kpis()
+        try:
+            kpis = api_client.get_kpis()
+        except Exception as e:
+            st.error(f"⚠️ Error fetching complaint metrics from backend: {str(e)}")
+            kpis = {}
 
         # Compute Category distribution DataFrame for PDF
         cat_df = df["category"].value_counts().reset_index()
@@ -117,8 +131,7 @@ def render_reports_view():
         chosen_id = st.selectbox("Select Complaint ID for Docket Generation", options=all_ids, key="report_single_cid")
 
         if chosen_id:
-            comp_record = db.get_complaint(chosen_id)
-            comp_hist = db.get_status_history(chosen_id)
+            comp_record, comp_hist = api_client.get_complaint(chosen_id)
             
             if comp_record:
                 st.write(f"**Selected Ticket:** `{chosen_id}` — *{comp_record['title']}* (Status: **{comp_record['status']}**)")
@@ -150,8 +163,10 @@ def render_reports_view():
             )
 
         with c2:
-            with db.get_connection() as conn:
-                hist_df = pd.read_sql_query("SELECT * FROM status_history ORDER BY changed_at DESC", conn)
+            try:
+                hist_df = api_client.get_all_status_history()
+            except Exception:
+                hist_df = pd.DataFrame()
             csv_history = hist_df.to_csv(index=False).encode('utf-8')
             st.download_button(
                 label="📥 Download Status History Audit CSV",

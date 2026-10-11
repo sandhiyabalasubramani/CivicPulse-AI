@@ -12,6 +12,8 @@ from .ui_components import (
     render_timeline
 )
 
+from .api_client import api_client, CivicPulseApiClient
+
 __all__ = [
     "validate_complaint_form",
     "inject_custom_css",
@@ -19,5 +21,7 @@ __all__ = [
     "get_priority_badge_html",
     "render_metric_card",
     "render_header",
-    "render_timeline"
+    "render_timeline",
+    "api_client",
+    "CivicPulseApiClient",
 ]

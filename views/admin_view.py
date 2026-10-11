@@ -7,7 +7,7 @@ complaint inspection, status update workflows, and audit trail logging.
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from database.database import get_db
+from utils.api_client import api_client
 from modules.report_generator import create_complaint_docket_pdf
 from modules.department_router import get_department_router
 from utils.ui_components import (
@@ -27,50 +27,125 @@ def render_admin_view():
         icon="🛡️"
     )
 
-    db = get_db()
+    if not api_client.check_health():
+        st.error(
+            f"⚠️ Unable to connect to CivicPulse AI backend service ({api_client.base_url}). "
+            "Please ensure the FastAPI service is running."
+        )
+        return
+
     router = get_department_router()
 
     # 1. Top KPI Summary Row
-    kpis = db.get_kpis()
+    try:
+        kpis = api_client.get_kpis()
+    except Exception as e:
+        st.error(f"⚠️ Error fetching complaint metrics from backend: {str(e)}")
+        kpis = {}
+
     col1, col2, col3, col4, col5 = st.columns(5)
+
     with col1:
-        render_metric_card("Total Logged", kpis["total"], "All time grievances", "#1E293B")
+        render_metric_card(
+            "Total Logged",
+            kpis.get("total", 0),
+            "All time grievances",
+            "#1E293B"
+        )
+
     with col2:
-        render_metric_card("Pending", kpis["pending"], "Awaiting triage", "#D97706")
+        render_metric_card(
+            "Pending",
+            kpis.get("pending", 0),
+            "Awaiting triage",
+            "#D97706"
+        )
+
     with col3:
-        render_metric_card("In Progress", kpis["in_progress"], "Under active resolution", "#2563EB")
+        render_metric_card(
+            "In Progress",
+            kpis.get("in_progress", 0),
+            "Under active resolution",
+            "#2563EB"
+        )
+
     with col4:
-        render_metric_card("Resolved", kpis["resolved"], f"{kpis['resolution_rate']}% resolution rate", "#16A34A")
+        render_metric_card(
+            "Resolved",
+            kpis.get("resolved", 0),
+            f"{kpis.get('resolution_rate', 0)}% resolution rate",
+            "#16A34A"
+        )
+
     with col5:
-        render_metric_card("Critical / High", kpis["critical_priority"] + kpis["high_priority"], "High urgency tickets", "#DC2626")
+        render_metric_card(
+            "Critical / High",
+            kpis.get("critical_priority", 0) + kpis.get("high_priority", 0),
+            "High urgency tickets",
+            "#DC2626"
+        )
 
     st.write("")
 
     # 2. Filters Bar
     with st.expander("🔍 Search & Filter Complaints", expanded=True):
         fcol1, fcol2, fcol3, fcol4 = st.columns(4)
-        
-        categories = ["All"] + db.get_distinct_values("category")
+
+        try:
+            categories = ["All"] + api_client.get_distinct_values("category")
+        except Exception:
+            categories = ["All"]
+
         priorities = ["All", "Critical", "High", "Medium", "Low"]
         statuses = ["All", "Pending", "Assigned", "In Progress", "Resolved", "Closed"]
-        locations = ["All"] + db.get_distinct_values("location")
+
+        try:
+            locations = ["All"] + api_client.get_distinct_values("location")
+        except Exception:
+            locations = ["All"]
 
         with fcol1:
-            filter_search = st.text_input("Text Search", placeholder="ID, keyword, name, room...", key="admin_search_input")
+            filter_search = st.text_input(
+                "Text Search",
+                placeholder="ID, keyword, name, room...",
+                key="admin_search_input"
+            )
+
         with fcol2:
-            filter_cat = st.selectbox("Category", options=categories, index=0, key="admin_filter_cat")
+            filter_cat = st.selectbox(
+                "Category",
+                options=categories,
+                index=0,
+                key="admin_filter_cat"
+            )
+
         with fcol3:
-            filter_prio = st.selectbox("Priority", options=priorities, index=0, key="admin_filter_prio")
+            filter_prio = st.selectbox(
+                "Priority",
+                options=priorities,
+                index=0,
+                key="admin_filter_prio"
+            )
+
         with fcol4:
-            filter_stat = st.selectbox("Status", options=statuses, index=0, key="admin_filter_stat")
+            filter_stat = st.selectbox(
+                "Status",
+                options=statuses,
+                index=0,
+                key="admin_filter_stat"
+            )
 
     # 3. Retrieve Filtered DataFrame
-    df = db.get_all_complaints(
-        category=filter_cat,
-        priority=filter_prio,
-        status=filter_stat,
-        search_query=filter_search
-    )
+    try:
+        df = api_client.get_all_complaints(
+            category=filter_cat,
+            priority=filter_prio,
+            status=filter_stat,
+            search_query=filter_search
+        )
+    except Exception as e:
+        st.error(f"⚠️ Failed to retrieve complaints from backend: {str(e)}")
+        df = pd.DataFrame()
 
     st.markdown(f"#### 📋 Grievance Tickets ({len(df)} records)")
 
@@ -80,9 +155,26 @@ def render_admin_view():
 
     # Display clean table
     display_df = df[[
-        "complaint_id", "title", "category", "priority", "location", "department", "status", "created_at"
+        "complaint_id",
+        "title",
+        "category",
+        "priority",
+        "location",
+        "department",
+        "status",
+        "created_at"
     ]].copy()
-    display_df.columns = ["Complaint ID", "Title", "Category", "Priority", "Location", "Department", "Status", "Created At"]
+
+    display_df.columns = [
+        "Complaint ID",
+        "Title",
+        "Category",
+        "Priority",
+        "Location",
+        "Department",
+        "Status",
+        "Created At"
+    ]
 
     st.dataframe(
         display_df,
@@ -94,32 +186,41 @@ def render_admin_view():
 
     # 4. Interactive Complaint Detail Inspector & Status Management
     st.markdown("### 🛠️ Complaint Inspector & Status Resolution Workflow")
-    
+
     complaint_ids = df["complaint_id"].tolist()
-    selected_cid = st.selectbox("Select Complaint ID to Inspect / Update", options=complaint_ids, key="admin_select_cid")
+
+    selected_cid = st.selectbox(
+        "Select Complaint ID to Inspect / Update",
+        options=complaint_ids,
+        key="admin_select_cid"
+    )
 
     if selected_cid:
-        complaint = db.get_complaint(selected_cid)
+        complaint, history = api_client.get_complaint(selected_cid)
+
         if complaint:
             col_info, col_action = st.columns([3, 2])
 
             with col_info:
-                st.markdown(f"""
+                st.markdown(
+                    f"""
                     <div class="cp-ai-card">
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px; margin-bottom: 10px;">
                             <span style="font-weight: 800; font-size: 1.1rem; color: #1E293B;">Ticket: {complaint['complaint_id']}</span>
-                            <div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
                                 {get_status_badge_html(complaint['status'])}
-                                &nbsp;
                                 {get_priority_badge_html(complaint['priority'])}
                             </div>
                         </div>
+
                         <div style="font-weight: 700; font-size: 1rem; color: #0F172A; margin-bottom: 6px;">
                             {complaint['title']}
                         </div>
+
                         <div style="font-size: 0.88rem; color: #334155; margin-bottom: 10px; background: #FFFFFF; padding: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
                             {complaint['description']}
                         </div>
+
                         <div style="font-size: 0.84rem; color: #475569; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                             <div><b>Complainant:</b> {complaint['name']}</div>
                             <div><b>Email:</b> {complaint['email']}</div>
@@ -130,22 +231,34 @@ def render_admin_view():
                             <div><b>Created At:</b> {complaint['created_at']}</div>
                             <div><b>Resolved At:</b> {complaint['resolved_at'] or 'Pending'}</div>
                         </div>
+
                         <div style="margin-top: 8px; font-size: 0.82rem; color: #B45309;">
                             <b>Priority Rationale:</b> {complaint.get('priority_reason') or 'Rule-based evaluation'}
                         </div>
                     </div>
-                """, unsafe_allow_html=True)
+                    """,
+                    unsafe_allow_html=True
+                )
 
                 if complaint.get("similar_count", 0) > 0:
-                    st.warning(f"⚠️ **Similarity Flag:** {complaint['similar_count']} potential matching complaint(s) found in historical database. Top match: `{complaint.get('top_similar_id', 'N/A')}` ({round(complaint.get('top_similarity_score', 0)*100, 1)}% score).")
+                    st.warning(
+                        f"⚠️ **Similarity Flag:** "
+                        f"{complaint['similar_count']} potential matching complaint(s) "
+                        f"found in historical database. "
+                        f"Top match: `{complaint.get('top_similar_id', 'N/A')}` "
+                        f"({round(complaint.get('top_similarity_score', 0) * 100, 1)}% score)."
+                    )
 
                 # Timeline & Audit Trail
-                history = db.get_status_history(selected_cid)
                 st.markdown("##### 🕒 Audit Trail & Status History")
                 render_timeline(history)
 
                 # PDF Docket Download
-                pdf_bytes = create_complaint_docket_pdf(complaint, history)
+                pdf_bytes = create_complaint_docket_pdf(
+                    complaint,
+                    history
+                )
+
                 st.download_button(
                     label=f"📥 Export Official PDF Docket ({selected_cid})",
                     data=pdf_bytes,
@@ -156,16 +269,39 @@ def render_admin_view():
 
             with col_action:
                 st.markdown("#### 📝 Update Ticket Status")
+
                 with st.form(f"update_status_form_{selected_cid}"):
-                    curr_status_idx = ["Pending", "Assigned", "In Progress", "Resolved", "Closed"].index(complaint["status"]) if complaint["status"] in ["Pending", "Assigned", "In Progress", "Resolved", "Closed"] else 0
-                    
+
+                    curr_status_idx = (
+                        ["Pending", "Assigned", "In Progress", "Resolved", "Closed"].index(
+                            complaint["status"]
+                        )
+                        if complaint["status"] in [
+                            "Pending",
+                            "Assigned",
+                            "In Progress",
+                            "Resolved",
+                            "Closed"
+                        ]
+                        else 0
+                    )
+
                     new_status = st.selectbox(
                         "Transition Status To",
-                        options=["Pending", "Assigned", "In Progress", "Resolved", "Closed"],
+                        options=[
+                            "Pending",
+                            "Assigned",
+                            "In Progress",
+                            "Resolved",
+                            "Closed"
+                        ],
                         index=curr_status_idx
                     )
 
-                    changed_by = st.text_input("Handler / Technician Name", value="Admin / Maintenance Team")
+                    changed_by = st.text_input(
+                        "Handler / Technician Name",
+                        value="Admin / Maintenance Team"
+                    )
 
                     status_comment = st.text_area(
                         "Action / Progress Remarks",
@@ -174,18 +310,48 @@ def render_admin_view():
                     )
 
                     st.markdown("##### ⚙️ Administrative Overrides")
-                    all_prio = ["Low", "Medium", "High", "Critical"]
-                    curr_prio_idx = all_prio.index(complaint["priority"]) if complaint["priority"] in all_prio else 1
-                    override_priority = st.selectbox("Override Priority Level", options=all_prio, index=curr_prio_idx)
+
+                    all_prio = [
+                        "Low",
+                        "Medium",
+                        "High",
+                        "Critical"
+                    ]
+
+                    curr_prio_idx = (
+                        all_prio.index(complaint["priority"])
+                        if complaint["priority"] in all_prio
+                        else 1
+                    )
+
+                    override_priority = st.selectbox(
+                        "Override Priority Level",
+                        options=all_prio,
+                        index=curr_prio_idx
+                    )
 
                     all_dept_opts = router.get_all_departments()
-                    curr_dept_idx = all_dept_opts.index(complaint["department"]) if complaint["department"] in all_dept_opts else 0
-                    override_dept = st.selectbox("Re-assign Department", options=all_dept_opts, index=curr_dept_idx)
 
-                    update_btn = st.form_submit_button("💾 Save Status & Log History", use_container_width=True, type="primary")
+                    curr_dept_idx = (
+                        all_dept_opts.index(complaint["department"])
+                        if complaint["department"] in all_dept_opts
+                        else 0
+                    )
+
+                    override_dept = st.selectbox(
+                        "Re-assign Department",
+                        options=all_dept_opts,
+                        index=curr_dept_idx
+                    )
+
+                    update_btn = st.form_submit_button(
+                        "💾 Save Status & Log History",
+                        use_container_width=True,
+                        type="primary"
+                    )
 
                     if update_btn:
-                        success = db.update_complaint_status(
+                        success = api_client.update_complaint_status(
                             complaint_id=selected_cid,
                             new_status=new_status,
                             changed_by=changed_by,
@@ -194,8 +360,13 @@ def render_admin_view():
                             priority=override_priority,
                             department=override_dept
                         )
+
                         if success:
-                            st.success(f"✅ Complaint `{selected_cid}` updated to **{new_status}**!")
+                            st.success(
+                                f"✅ Complaint `{selected_cid}` updated to **{new_status}**!"
+                            )
                             st.rerun()
                         else:
-                            st.error("❌ Failed to update complaint status. Please try again.")
+                            st.error(
+                                "❌ Failed to update complaint status. Please try again."
+                            )
