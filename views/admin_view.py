@@ -4,6 +4,7 @@ Provides multi-criteria search & filtering, live KPI counters,
 complaint inspection, status update workflows, and audit trail logging.
 """
 
+from html import escape
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -15,16 +16,18 @@ from utils.ui_components import (
     render_metric_card,
     get_status_badge_html,
     get_priority_badge_html,
-    render_timeline
+    render_timeline,
+    render_status_stepper
 )
 
 
 def render_admin_view():
     """Renders the administrative complaint management dashboard."""
     render_header(
-        title="Admin Complaint Management & Operations",
-        subtitle="Filter, inspect, route, and update status of all submitted institutional grievances.",
-        icon="🛡️"
+        title="Administrative Grievance Operations",
+        subtitle="Inspect, route, prioritize, and log status transitions for all institutional grievances.",
+        icon="🛡️",
+        badge="Enterprise Control Center"
     )
 
     if not api_client.check_health():
@@ -49,8 +52,9 @@ def render_admin_view():
         render_metric_card(
             "Total Logged",
             kpis.get("total", 0),
-            "All time grievances",
-            "#1E293B"
+            "All-time grievances",
+            "#172554",
+            "📊"
         )
 
     with col2:
@@ -58,23 +62,26 @@ def render_admin_view():
             "Pending",
             kpis.get("pending", 0),
             "Awaiting triage",
-            "#D97706"
+            "#F59E0B",
+            "⏳"
         )
 
     with col3:
         render_metric_card(
             "Assigned",
             kpis.get("assigned", 0),
-            "Routed to department",
-            "#7C3AED"
+            "Routed to division",
+            "#8B5CF6",
+            "🏢"
         )
 
     with col4:
         render_metric_card(
             "In Progress",
             kpis.get("in_progress", 0),
-            "Under active resolution",
-            "#2563EB"
+            "Under active triage",
+            "#2563EB",
+            "⚙️"
         )
 
     with col5:
@@ -82,18 +89,20 @@ def render_admin_view():
             "Resolved",
             kpis.get("resolved", 0),
             f"{kpis.get('resolution_rate', 0)}% resolution rate",
-            "#16A34A"
+            "#0D9488",
+            "✅"
         )
 
     with col6:
         render_metric_card(
             "Critical / High",
             kpis.get("critical_priority", 0) + kpis.get("high_priority", 0),
-            "High urgency tickets",
-            "#DC2626"
+            "Urgent attention needed",
+            "#EF4444",
+            "🚨"
         )
 
-    st.write("")
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
     # 2. Filters Bar
     with st.expander("🔍 Search & Filter Complaints", expanded=True):
@@ -106,11 +115,6 @@ def render_admin_view():
 
         priorities = ["All", "Critical", "High", "Medium", "Low"]
         statuses = ["All", "Pending", "Assigned", "In Progress", "Resolved", "Closed"]
-
-        try:
-            locations = ["All"] + api_client.get_distinct_values("location")
-        except Exception:
-            locations = ["All"]
 
         with fcol1:
             filter_search = st.text_input(
@@ -155,10 +159,17 @@ def render_admin_view():
         st.error(f"⚠️ Failed to retrieve complaints from backend: {str(e)}")
         df = pd.DataFrame()
 
-    st.markdown(f"#### 📋 Grievance Tickets ({len(df)} records)")
+    st.markdown(
+        f'<div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 10px 0;">'
+        f'<div style="font-family:\'Poppins\', sans-serif;font-weight:700;font-size:1.15rem;color:#0F172A;">'
+        f'📋 Grievance Tickets <span style="background:#EEF2FF;color:#4F46E5;border:1px solid #C7D2FE;font-size:0.8rem;padding:2px 8px;border-radius:12px;margin-left:6px;">{len(df)} records</span>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
     if df.empty:
-        st.info("No complaints found matching the selected filter criteria.")
+        st.info("ℹ️ No complaints found matching the selected filter criteria.")
         return
 
     # Display clean table
@@ -190,10 +201,21 @@ def render_admin_view():
         hide_index=True
     )
 
+    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
     st.divider()
 
     # 4. Interactive Complaint Detail Inspector & Status Management
-    st.markdown("### 🛠️ Complaint Inspector & Status Resolution Workflow")
+    st.markdown(
+        """
+        <div style="font-family:'Poppins', sans-serif;font-size:1.3rem;font-weight:700;color:#0F172A;margin-bottom:6px;">
+            🛠️ Complaint Inspector & Status Resolution Workflow
+        </div>
+        <div style="font-size:0.88rem;color:#64748B;margin-bottom:14px;">
+            Select any complaint from the active queue to inspect full telemetry, update resolution milestones, or re-route departments.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     complaint_ids = df["complaint_id"].tolist()
 
@@ -210,165 +232,193 @@ def render_admin_view():
             col_info, col_action = st.columns([3, 2])
 
             with col_info:
-                st.subheader(complaint["title"])
+                status_badge = get_status_badge_html(complaint["status"])
+                priority_badge = get_priority_badge_html(complaint["priority"])
 
-                col_meta1, col_meta2, col_meta3 = st.columns(3)
-                with col_meta1:
-                    st.write(f"**Ticket:** {complaint['complaint_id']}")
-                with col_meta2:
-                    st.write(f"**Status:** {complaint['status']}")
-                with col_meta3:
-                    st.write(f"**Priority:** {complaint['priority']}")
-
-                st.write(complaint["description"])
-
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**Complainant:** {complaint['name']}")
-                    st.write(f"**Email:** {complaint['email']}")
-                    st.write(f"**Location:** {complaint['location']}")
-                    st.write(f"**Category:** {complaint['category']}")
-                with col2:
-                    st.write(f"**Subcategory:** {complaint['subcategory']}")
-                    st.write(f"**Assigned Dept:** {complaint['department']}")
-                    st.write(f"**Created At:** {complaint['created_at']}")
-                    st.write(f"**Resolved At:** {complaint['resolved_at'] or 'Pending'}")
-
-                st.caption(
-                    f"**Priority Rationale:** {complaint.get('priority_reason') or 'Rule-based evaluation'}"
-                )
-
-                if complaint.get("similar_count", 0) > 0:
-                    st.warning(
-                        f"⚠️ **Similarity Flag:** "
-                        f"{complaint['similar_count']} potential matching complaint(s) "
-                        f"found in historical database. "
-                        f"Top match: `{complaint.get('top_similar_id', 'N/A')}` "
-                        f"({round(complaint.get('top_similarity_score', 0) * 100, 1)}% score)."
+                with st.container(border=True):
+                    st.markdown(
+                        f'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-bottom:1px solid #E2E8F0;padding-bottom:10px;margin-bottom:12px;">'
+                        f'<div>'
+                        f'<span style="font-size:0.75rem;font-weight:700;color:#64748B;text-transform:uppercase;">Ticket Identifier:</span> '
+                        f'<span style="font-family:\'JetBrains Mono\', monospace;font-weight:700;font-size:1.2rem;color:#1E3A8A;background:#EFF6FF;border:1px solid #BFDBFE;padding:2px 8px;border-radius:6px;">{escape(str(complaint["complaint_id"]))}</span>'
+                        f'</div>'
+                        f'<div style="display:flex;gap:6px;">{status_badge}{priority_badge}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True
                     )
+
+                    st.markdown(f"### {complaint['title']}")
+
+                    # Description
+                    desc_html = (
+                        f'<div style="background-color:#F8FAFC;border:1px solid #E2E8F0;border-left:4px solid #3B82F6;'
+                        f'border-radius:0 10px 10px 0;padding:12px 14px;margin:8px 0 14px 0;font-size:0.92rem;color:#334155;line-height:1.6;">'
+                        f'{escape(str(complaint["description"]))}</div>'
+                    )
+                    st.markdown(desc_html, unsafe_allow_html=True)
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown(f"**👤 Complainant:** {complaint['name']}")
+                        st.markdown(f"**📧 Email:** {complaint['email']}")
+                        st.markdown(f"**📍 Location:** {complaint['location']}")
+                        st.markdown(f"**🏷️ Category:** {complaint['category']}")
+                    with col2:
+                        st.markdown(f"**📑 Subcategory:** {complaint['subcategory']}")
+                        st.markdown(f"**🏢 Assigned Dept:** {complaint['department']}")
+                        st.markdown(f"**📅 Created At:** {complaint['created_at']}")
+                        st.markdown(f"**🏁 Resolved At:** {complaint['resolved_at'] or 'Pending'}")
+
+                    st.caption(
+                        f"🤖 **Priority Assessment Rationale:** {complaint.get('priority_reason') or 'Rule-based evaluation'}"
+                    )
+
+                    if complaint.get("similar_count", 0) > 0:
+                        top_score_val = complaint.get("top_similarity_score", 0) or 0
+                        top_score_pct = top_score_val * 100 if top_score_val <= 1.0 else top_score_val
+                        st.warning(
+                            f"⚠️ **Semantic Similarity Alert:** "
+                            f"{complaint['similar_count']} potential matching complaint(s) found. "
+                            f"Top match: `{complaint.get('top_similar_id', 'N/A')}` "
+                            f"({top_score_pct:.1f}% score)."
+                        )
 
                 # Timeline & Audit Trail
                 st.markdown("##### 🕒 Audit Trail & Status History")
                 render_timeline(history)
 
                 # PDF Docket Download
-                pdf_bytes = create_complaint_docket_pdf(
-                    complaint,
-                    history
-                )
-
-                st.download_button(
-                    label=f"📥 Export Official PDF Docket ({selected_cid})",
-                    data=pdf_bytes,
-                    file_name=f"{selected_cid}_Docket.pdf",
-                    mime="application/pdf",
-                    key=f"admin_download_{selected_cid}"
-                )
+                try:
+                    pdf_bytes = create_complaint_docket_pdf(complaint, history)
+                    st.download_button(
+                        label=f"📥 Export Official PDF Docket ({selected_cid})",
+                        data=pdf_bytes,
+                        file_name=f"{selected_cid}_Docket.pdf",
+                        mime="application/pdf",
+                        key=f"admin_download_{selected_cid}",
+                        use_container_width=True
+                    )
+                except Exception as e:
+                    st.error(f"❌ Failed to generate PDF: {str(e)}")
 
             with col_action:
-                st.markdown("#### 📝 Update Ticket Status")
+                with st.container(border=True):
+                    st.markdown(
+                        """
+                        <div style="font-family:'Poppins', sans-serif;font-size:1.1rem;font-weight:700;color:#0F172A;border-bottom:1px solid #E2E8F0;padding-bottom:8px;margin-bottom:12px;">
+                            📝 Update Ticket Status
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
-                with st.form(f"update_status_form_{selected_cid}"):
-
-                    curr_status_idx = (
-                        ["Pending", "Assigned", "In Progress", "Resolved", "Closed"].index(
-                            complaint["status"]
+                    with st.form(f"update_status_form_{selected_cid}"):
+                        curr_status_idx = (
+                            ["Pending", "Assigned", "In Progress", "Resolved", "Closed"].index(
+                                complaint["status"]
+                            )
+                            if complaint["status"] in [
+                                "Pending",
+                                "Assigned",
+                                "In Progress",
+                                "Resolved",
+                                "Closed"
+                            ]
+                            else 0
                         )
-                        if complaint["status"] in [
-                            "Pending",
-                            "Assigned",
-                            "In Progress",
-                            "Resolved",
-                            "Closed"
+
+                        new_status = st.selectbox(
+                            "Transition Status To",
+                            options=[
+                                "Pending",
+                                "Assigned",
+                                "In Progress",
+                                "Resolved",
+                                "Closed"
+                            ],
+                            index=curr_status_idx
+                        )
+
+                        changed_by = st.text_input(
+                            "Handler / Technician Name",
+                            value="Admin / Maintenance Team"
+                        )
+
+                        status_comment = st.text_area(
+                            "Action / Progress Remarks",
+                            placeholder="e.g. Technician dispatched / Parts replaced / Issue resolved...",
+                            height=90
+                        )
+
+                        st.markdown(
+                            """
+                            <div style="font-size:0.88rem;font-weight:700;color:#475569;margin-top:10px;margin-bottom:6px;">
+                                ⚙️ Administrative Overrides
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+
+                        all_prio = [
+                            "Low",
+                            "Medium",
+                            "High",
+                            "Critical"
                         ]
-                        else 0
-                    )
 
-                    new_status = st.selectbox(
-                        "Transition Status To",
-                        options=[
-                            "Pending",
-                            "Assigned",
-                            "In Progress",
-                            "Resolved",
-                            "Closed"
-                        ],
-                        index=curr_status_idx
-                    )
-
-                    changed_by = st.text_input(
-                        "Handler / Technician Name",
-                        value="Admin / Maintenance Team"
-                    )
-
-                    status_comment = st.text_area(
-                        "Action / Progress Remarks",
-                        placeholder="e.g. Technician dispatched / Parts replaced / Issue resolved...",
-                        height=90
-                    )
-
-                    st.markdown("##### ⚙️ Administrative Overrides")
-
-                    all_prio = [
-                        "Low",
-                        "Medium",
-                        "High",
-                        "Critical"
-                    ]
-
-                    curr_prio_idx = (
-                        all_prio.index(complaint["priority"])
-                        if complaint["priority"] in all_prio
-                        else 1
-                    )
-
-                    override_priority = st.selectbox(
-                        "Override Priority Level",
-                        options=all_prio,
-                        index=curr_prio_idx
-                    )
-
-                    all_dept_opts = router.get_all_departments()
-
-                    curr_dept_idx = (
-                        all_dept_opts.index(complaint["department"])
-                        if complaint["department"] in all_dept_opts
-                        else 0
-                    )
-
-                    override_dept = st.selectbox(
-                        "Re-assign Department",
-                        options=all_dept_opts,
-                        index=curr_dept_idx
-                    )
-
-                    update_btn = st.form_submit_button(
-                        "💾 Save Status & Log History",
-                        use_container_width=True,
-                        type="primary"
-                    )
-
-                    if update_btn:
-                        result = api_client.update_complaint_status(
-                            complaint_id=selected_cid,
-                            new_status=new_status,
-                            changed_by=changed_by,
-                            comment=status_comment,
-                            admin_notes=status_comment,
-                            priority=override_priority,
-                            department=override_dept
+                        curr_prio_idx = (
+                            all_prio.index(complaint["priority"])
+                            if complaint["priority"] in all_prio
+                            else 1
                         )
 
-                        if result:
-                            st.success(
-                                f"✅ Complaint `{selected_cid}` updated to **{new_status}**!"
+                        override_priority = st.selectbox(
+                            "Override Priority Level",
+                            options=all_prio,
+                            index=curr_prio_idx
+                        )
+
+                        all_dept_opts = router.get_all_departments()
+
+                        curr_dept_idx = (
+                            all_dept_opts.index(complaint["department"])
+                            if complaint["department"] in all_dept_opts
+                            else 0
+                        )
+
+                        override_dept = st.selectbox(
+                            "Re-assign Department",
+                            options=all_dept_opts,
+                            index=curr_dept_idx
+                        )
+
+                        update_btn = st.form_submit_button(
+                            "💾 Save Status & Log History",
+                            use_container_width=True,
+                            type="primary"
+                        )
+
+                        if update_btn:
+                            result = api_client.update_complaint_status(
+                                complaint_id=selected_cid,
+                                new_status=new_status,
+                                changed_by=changed_by,
+                                comment=status_comment,
+                                admin_notes=status_comment,
+                                priority=override_priority,
+                                department=override_dept
                             )
-                            st.rerun()
-                        else:
-                            error_detail = (
-                                getattr(result, "message", None)
-                                or "Please verify your configuration and try again."
-                            )
-                            st.error(
-                                f"❌ Failed to update complaint status: {error_detail}"
-                            )
+
+                            if result:
+                                st.success(
+                                    f"✅ Complaint `{selected_cid}` updated to **{new_status}**!"
+                                )
+                                st.rerun()
+                            else:
+                                error_detail = (
+                                    getattr(result, "message", None)
+                                    or "Please verify your configuration and try again."
+                                )
+                                st.error(
+                                    f"❌ Failed to update complaint status: {error_detail}"
+                                )

@@ -1,6 +1,8 @@
 """
 Complaint Status Tracker View for CivicPulse AI.
 Tracks complaints through the FastAPI PostgreSQL backend or local SQLite database.
+Features visual status progress pipeline, metadata inspection, duplicate alert notices,
+chronological audit trail, and official PDF docket download.
 """
 
 from html import escape
@@ -15,6 +17,7 @@ from utils.ui_components import (
     get_status_badge_html,
     render_header,
     render_timeline,
+    render_status_stepper,
 )
 
 
@@ -92,7 +95,7 @@ def _render_complaint_card(
 ) -> None:
     """
     Renders complaint details, status, priority, department,
-    audit history timeline, and official PDF docket download in clear English.
+    visual progress stepper, audit history timeline, and official PDF docket download.
     """
     cid = str(complaint.get("complaint_id", "N/A"))
     title = str(complaint.get("title", "Untitled Complaint"))
@@ -115,13 +118,18 @@ def _render_complaint_card(
     status_badge = get_status_badge_html(status)
     priority_badge = get_priority_badge_html(priority)
 
-    # 1. Main Complaint Detail Card (uses native Streamlit container to prevent raw HTML code blocks)
+    # 1. Visual Progress Pipeline Stepper
+    render_status_stepper(status)
+
+    # 2. Main Complaint Detail Card
     with st.container(border=True):
         col_hdr_left, col_hdr_right = st.columns([3, 2])
         with col_hdr_left:
             st.markdown(
-                f'<div style="font-weight:800;font-size:1.15rem;color:#1E293B;">'
-                f'Complaint Reference: {escape(cid)}</div>',
+                f'<div style="display:flex;align-items:center;gap:10px;">'
+                f'<span style="font-size:0.75rem;font-weight:700;color:#64748B;text-transform:uppercase;">Ticket Identifier:</span>'
+                f'<span style="font-family:\'JetBrains Mono\', monospace;font-weight:700;font-size:1.25rem;color:#1E3A8A;background:#EFF6FF;border:1px solid #BFDBFE;padding:2px 10px;border-radius:8px;">{escape(cid)}</span>'
+                f'</div>',
                 unsafe_allow_html=True,
             )
         with col_hdr_right:
@@ -131,52 +139,59 @@ def _render_complaint_card(
                 unsafe_allow_html=True,
             )
 
-        st.markdown(f"**Subject Title:** {title}")
+        st.markdown(f"### {title}")
 
-        # Description container
+        # Description box
         desc_box_html = (
-            f'<div style="background-color:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;'
-            f'padding:12px;margin:8px 0 14px 0;font-size:0.92rem;color:#334155;line-height:1.5;">'
+            f'<div style="background-color:#F8FAFC;border:1px solid #E2E8F0;border-left:4px solid #3B82F6;'
+            f'border-radius:0 10px 10px 0;padding:14px 16px;margin:10px 0 16px 0;font-size:0.94rem;color:#334155;line-height:1.6;">'
             f'{escape(description)}</div>'
         )
         st.markdown(desc_box_html, unsafe_allow_html=True)
 
         col_m1, col_m2 = st.columns(2)
         with col_m1:
-            st.markdown(f"**Complainant:** {name}")
-            st.markdown(f"**Email Address:** {email}")
-            st.markdown(f"**Location Context:** {location}")
-            st.markdown(f"**Category:** {category}")
+            st.markdown(f"**👤 Complainant:** {name}")
+            st.markdown(f"**📧 Email Address:** {email}")
+            st.markdown(f"**📍 Location Context:** {location}")
+            st.markdown(f"**🏷️ Category:** {category}")
         with col_m2:
-            st.markdown(f"**Subcategory:** {subcategory}")
-            st.markdown(f"**Assigned Department:** {department}")
-            st.markdown(f"**Submission Date:** {created_at}")
-            st.markdown(f"**Resolution Date:** {resolved_at}")
+            st.markdown(f"**📑 Subcategory:** {subcategory}")
+            st.markdown(f"**🏢 Assigned Department:** {department}")
+            st.markdown(f"**📅 Submitted Date:** {created_at}")
+            st.markdown(f"**🏁 Resolution Date:** {resolved_at}")
 
         if priority_reason:
-            st.caption(f"**Priority Assessment Rationale:** {priority_reason}")
+            st.caption(f"🤖 **AI Priority Rationale:** {priority_reason}")
 
         if admin_notes:
-            st.info(f"**Administrative Notes:** {admin_notes}")
+            st.info(f"📝 **Administrative Notes:** {admin_notes}")
 
-    # 2. Semantic Similarity Flag
+    # 3. Semantic Similarity Notice (if any)
     similar_count = complaint.get("similar_count", 0) or 0
     if similar_count > 0:
         top_similar_id = complaint.get("top_similar_id", "N/A")
         top_score = complaint.get("top_similarity_score", 0.0) or 0.0
         score_percent = top_score * 100 if top_score <= 1.0 else top_score
-        st.warning(
-            f"⚠️ **Semantic Similarity Notice:** Identified {similar_count} potentially related "
-            f"complaint(s) in the database. Closest historical match: `{top_similar_id}` "
-            f"({score_percent:.1f}% semantic similarity)."
+        st.markdown(
+            f'<div class="cp-similarity-box">'
+            f'<div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#92400E;">'
+            f'<span>⚠️</span> <span>Semantic Similarity Notice: {similar_count} Related Record(s) Identified</span>'
+            f'</div>'
+            f'<div style="font-size:0.88rem;color:#78350F;margin-top:4px;">'
+            f'Closest historical match: <b>{escape(str(top_similar_id))}</b> '
+            f'({score_percent:.1f}% semantic similarity score).'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
         )
 
-    # 3. Chronological Audit History Timeline
-    st.markdown("##### 🕒 Audit Trail & Status Timeline")
+    # 4. Chronological Audit History Timeline
+    st.markdown("##### 🕒 Chronological Audit Trail & Status Log")
     normalized_history = _normalize_history(history, complaint)
     render_timeline(normalized_history)
 
-    # 4. Official PDF Docket Download
+    # 5. Official PDF Docket Download Card
     st.markdown("##### 📄 Official Complaint Docket")
     try:
         pdf_bytes = create_complaint_docket_pdf(complaint, normalized_history)
@@ -195,22 +210,27 @@ def _render_complaint_card(
 def render_tracker_view() -> None:
     """Render complaint tracking by reference ID or registered email in clear English."""
     render_header(
-        title="Track Complaint Status & Timeline",
-        subtitle="Look up real-time resolution progress and audit history for your grievances.",
+        title="Track Grievance Status & Audit Trail",
+        subtitle="Look up real-time resolution progress, assigned technician notes, and audit history.",
         icon="🔎",
+        badge="Real-Time Resolution Pipeline"
     )
 
     tab_id, tab_email = st.tabs(
-        ["Search by Complaint ID", "Search by Registered Email"]
+        ["🔍 Search by Complaint Reference ID", "📧 Search by Registered Email"]
     )
 
     # -------------------------------------------------------------
     # TAB 1: Search by Complaint ID (FastAPI PostgreSQL Backend)
     # -------------------------------------------------------------
     with tab_id:
-        st.markdown("#### 🎫 Track by Complaint Reference ID")
-        st.caption(
-            "Query live complaint status, priority, department, and audit history via the FastAPI backend service."
+        st.markdown(
+            """
+            <div style="font-size:0.92rem;color:#475569;margin-bottom:12px;">
+                Enter your unique grievance reference identifier (e.g., <code>CP-2026-0001</code>) to retrieve live resolution milestones.
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
         with st.form("search_by_id_form"):
@@ -220,7 +240,7 @@ def render_tracker_view() -> None:
                 complaint_id_input = st.text_input(
                     "Complaint Reference ID",
                     value=st.session_state.get("tracker_id_query", ""),
-                    placeholder="e.g., CP-2026-0001 or CP-3C418E94",
+                    placeholder="e.g. CP-2026-0001 or CP-3C418E94",
                     key="tracker_id_input_field",
                 )
 
@@ -336,9 +356,13 @@ def render_tracker_view() -> None:
     # TAB 2: Search by Registered Email (FastAPI PostgreSQL Backend)
     # -------------------------------------------------------------
     with tab_email:
-        st.markdown("#### 📧 Track by Registered Email")
-        st.caption(
-            "Retrieve all grievance records registered under your email address via the FastAPI backend service."
+        st.markdown(
+            """
+            <div style="font-size:0.92rem;color:#475569;margin-bottom:12px;">
+                Enter your registered institutional email to view all grievances filed under your account.
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
         with st.form("search_by_email_form"):
@@ -348,7 +372,7 @@ def render_tracker_view() -> None:
                 email_input = st.text_input(
                     "Registered Email Address",
                     value=st.session_state.get("tracker_email_query", ""),
-                    placeholder="e.g., resident@institution.edu",
+                    placeholder="e.g. resident@institution.edu",
                     key="tracker_email_input_field",
                 )
 
