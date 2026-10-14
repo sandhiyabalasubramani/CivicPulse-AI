@@ -292,6 +292,9 @@ class DatabaseManager:
             cursor.execute("SELECT COUNT(*) as cnt FROM complaints WHERE status = 'Pending'")
             pending = cursor.fetchone()["cnt"]
 
+            cursor.execute("SELECT COUNT(*) as cnt FROM complaints WHERE status = 'Assigned'")
+            assigned = cursor.fetchone()["cnt"]
+
             cursor.execute("SELECT COUNT(*) as cnt FROM complaints WHERE status = 'In Progress'")
             in_progress = cursor.fetchone()["cnt"]
 
@@ -334,6 +337,7 @@ class DatabaseManager:
         return {
             "total": total,
             "pending": pending,
+            "assigned": assigned,
             "in_progress": in_progress,
             "resolved": resolved,
             "high_priority": high_priority,

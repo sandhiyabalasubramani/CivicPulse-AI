@@ -144,6 +144,10 @@ class ComplaintRequest(BaseModel):
         return v
 
 
+SUPPORTED_STATUSES = ["Pending", "Assigned", "In Progress", "Resolved", "Closed"]
+SUPPORTED_PRIORITIES = ["Low", "Medium", "High", "Critical"]
+
+
 class StatusUpdateRequest(BaseModel):
     new_status: str
     changed_by: Optional[str] = "Admin"
@@ -151,6 +155,32 @@ class StatusUpdateRequest(BaseModel):
     admin_notes: Optional[str] = None
     priority: Optional[str] = None
     department: Optional[str] = None
+
+    @field_validator("new_status")
+    @classmethod
+    def validate_new_status(cls, v: Any) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("Status is required and cannot be empty.")
+        clean_status = v.strip()
+        for valid in SUPPORTED_STATUSES:
+            if clean_status.lower() == valid.lower():
+                return valid
+        raise ValueError(
+            f"Invalid status '{clean_status}'. Supported statuses are: {', '.join(SUPPORTED_STATUSES)}"
+        )
+
+    @field_validator("priority")
+    @classmethod
+    def validate_priority(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        clean_prio = v.strip()
+        for valid in SUPPORTED_PRIORITIES:
+            if clean_prio.lower() == valid.lower():
+                return valid
+        raise ValueError(
+            f"Invalid priority '{clean_prio}'. Supported priorities are: {', '.join(SUPPORTED_PRIORITIES)}"
+        )
 
 
 # ============================================================
@@ -477,6 +507,9 @@ def get_complaint_kpis():
             cur.execute("SELECT COUNT(*) FROM complaints WHERE status = 'Pending'")
             pending = cur.fetchone()[0]
 
+            cur.execute("SELECT COUNT(*) FROM complaints WHERE status = 'Assigned'")
+            assigned = cur.fetchone()[0]
+
             cur.execute("SELECT COUNT(*) FROM complaints WHERE status = 'In Progress'")
             in_progress = cur.fetchone()[0]
 
@@ -522,6 +555,7 @@ def get_complaint_kpis():
             "kpis": {
                 "total": total,
                 "pending": pending,
+                "assigned": assigned,
                 "in_progress": in_progress,
                 "resolved": resolved,
                 "high_priority": high_priority,
@@ -598,6 +632,13 @@ def update_complaint_status(
     request: StatusUpdateRequest,
     _auth: bool = Depends(verify_admin_auth)
 ):
+    cid = complaint_id.strip() if complaint_id else ""
+    if not cid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complaint ID cannot be empty."
+        )
+
     conn = None
     try:
         conn = get_connection()
@@ -606,13 +647,13 @@ def update_complaint_status(
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT status, resolved_at FROM complaints WHERE complaint_id = %s",
-                (complaint_id,)
+                (cid,)
             )
             row = cur.fetchone()
             if not row:
                 raise HTTPException(
-                    status_code=404,
-                    detail=f"Complaint '{complaint_id}' not found"
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Complaint '{cid}' not found"
                 )
 
             old_status = row[0]
@@ -643,7 +684,7 @@ def update_complaint_status(
                 update_params.append(request.department)
 
             update_query += " WHERE complaint_id = %s"
-            update_params.append(complaint_id)
+            update_params.append(cid)
 
             cur.execute(update_query, tuple(update_params))
 
@@ -656,7 +697,7 @@ def update_complaint_status(
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """,
                 (
-                    complaint_id,
+                    cid,
                     old_status,
                     request.new_status,
                     request.changed_by or "Admin",
@@ -668,9 +709,14 @@ def update_complaint_status(
         conn.commit()
         return {
             "status": "success",
-            "message": f"Complaint {complaint_id} updated to {request.new_status}"
+            "message": f"Complaint {cid} updated to {request.new_status}"
         }
     except HTTPException:
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
         raise
     except Exception as e:
         if conn:
@@ -678,9 +724,9 @@ def update_complaint_status(
                 conn.rollback()
             except Exception:
                 pass
-        logger.error("Status update failed for complaint %s: %s", complaint_id, e, exc_info=True)
+        logger.error("Status update failed for complaint %s: %s", cid, e, exc_info=True)
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred while updating the complaint status."
         )
     finally:

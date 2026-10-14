@@ -123,5 +123,6 @@ def test_kpis_calculation(temp_db):
     kpis = temp_db.get_kpis()
     assert kpis["total"] == 2
     assert kpis["pending"] == 1
+    assert kpis["assigned"] == 0
     assert kpis["resolved"] == 1
     assert kpis["critical_priority"] == 1

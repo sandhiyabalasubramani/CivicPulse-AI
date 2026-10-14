@@ -1186,6 +1186,13 @@ python -m venv venv
 
 pip install -r requirements.txt
 
+# Copy environment template and configure DATABASE_URL and ADMIN_API_KEY
+copy .env.example .env
+
+# Run automated test suite
+pytest tests/ -v
+
+# Run the Streamlit frontend
 streamlit run app.py
 ```
 
@@ -1194,10 +1201,10 @@ Then open the local Streamlit URL displayed in the terminal.
 For backend development:
 
 ```powershell
-uvicorn backend.main:app --reload
+uvicorn backend.main:app --reload --port 8000
 ```
 
-Then open:
+Then open the interactive Swagger API documentation:
 
 ```text
 http://127.0.0.1:8000/docs

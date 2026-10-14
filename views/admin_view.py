@@ -43,7 +43,7 @@ def render_admin_view():
         st.error(f"⚠️ Error fetching complaint metrics from backend: {str(e)}")
         kpis = {}
 
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
 
     with col1:
         render_metric_card(
@@ -63,13 +63,21 @@ def render_admin_view():
 
     with col3:
         render_metric_card(
+            "Assigned",
+            kpis.get("assigned", 0),
+            "Routed to department",
+            "#7C3AED"
+        )
+
+    with col4:
+        render_metric_card(
             "In Progress",
             kpis.get("in_progress", 0),
             "Under active resolution",
             "#2563EB"
         )
 
-    with col4:
+    with col5:
         render_metric_card(
             "Resolved",
             kpis.get("resolved", 0),
@@ -77,7 +85,7 @@ def render_admin_view():
             "#16A34A"
         )
 
-    with col5:
+    with col6:
         render_metric_card(
             "Critical / High",
             kpis.get("critical_priority", 0) + kpis.get("high_priority", 0),
@@ -202,42 +210,32 @@ def render_admin_view():
             col_info, col_action = st.columns([3, 2])
 
             with col_info:
-                st.markdown(
-                    f"""
-                    <div class="cp-ai-card">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px; margin-bottom: 10px;">
-                            <span style="font-weight: 800; font-size: 1.1rem; color: #1E293B;">Ticket: {complaint['complaint_id']}</span>
-                            <div style="display: flex; gap: 6px; align-items: center;">
-                                {get_status_badge_html(complaint['status'])}
-                                {get_priority_badge_html(complaint['priority'])}
-                            </div>
-                        </div>
+                st.subheader(complaint["title"])
 
-                        <div style="font-weight: 700; font-size: 1rem; color: #0F172A; margin-bottom: 6px;">
-                            {complaint['title']}
-                        </div>
+                col_meta1, col_meta2, col_meta3 = st.columns(3)
+                with col_meta1:
+                    st.write(f"**Ticket:** {complaint['complaint_id']}")
+                with col_meta2:
+                    st.write(f"**Status:** {complaint['status']}")
+                with col_meta3:
+                    st.write(f"**Priority:** {complaint['priority']}")
 
-                        <div style="font-size: 0.88rem; color: #334155; margin-bottom: 10px; background: #FFFFFF; padding: 8px; border-radius: 6px; border: 1px solid #E2E8F0;">
-                            {complaint['description']}
-                        </div>
+                st.write(complaint["description"])
 
-                        <div style="font-size: 0.84rem; color: #475569; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                            <div><b>Complainant:</b> {complaint['name']}</div>
-                            <div><b>Email:</b> {complaint['email']}</div>
-                            <div><b>Location:</b> {complaint['location']}</div>
-                            <div><b>Category:</b> {complaint['category']}</div>
-                            <div><b>Subcategory:</b> {complaint['subcategory']}</div>
-                            <div><b>Assigned Dept:</b> {complaint['department']}</div>
-                            <div><b>Created At:</b> {complaint['created_at']}</div>
-                            <div><b>Resolved At:</b> {complaint['resolved_at'] or 'Pending'}</div>
-                        </div>
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**Complainant:** {complaint['name']}")
+                    st.write(f"**Email:** {complaint['email']}")
+                    st.write(f"**Location:** {complaint['location']}")
+                    st.write(f"**Category:** {complaint['category']}")
+                with col2:
+                    st.write(f"**Subcategory:** {complaint['subcategory']}")
+                    st.write(f"**Assigned Dept:** {complaint['department']}")
+                    st.write(f"**Created At:** {complaint['created_at']}")
+                    st.write(f"**Resolved At:** {complaint['resolved_at'] or 'Pending'}")
 
-                        <div style="margin-top: 8px; font-size: 0.82rem; color: #B45309;">
-                            <b>Priority Rationale:</b> {complaint.get('priority_reason') or 'Rule-based evaluation'}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
+                st.caption(
+                    f"**Priority Rationale:** {complaint.get('priority_reason') or 'Rule-based evaluation'}"
                 )
 
                 if complaint.get("similar_count", 0) > 0:
@@ -351,7 +349,7 @@ def render_admin_view():
                     )
 
                     if update_btn:
-                        success = api_client.update_complaint_status(
+                        result = api_client.update_complaint_status(
                             complaint_id=selected_cid,
                             new_status=new_status,
                             changed_by=changed_by,
@@ -361,12 +359,16 @@ def render_admin_view():
                             department=override_dept
                         )
 
-                        if success:
+                        if result:
                             st.success(
                                 f"✅ Complaint `{selected_cid}` updated to **{new_status}**!"
                             )
                             st.rerun()
                         else:
+                            error_detail = (
+                                getattr(result, "message", None)
+                                or "Please verify your configuration and try again."
+                            )
                             st.error(
-                                "❌ Failed to update complaint status. Please try again."
+                                f"❌ Failed to update complaint status: {error_detail}"
                             )

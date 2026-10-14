@@ -22,6 +22,7 @@ venv.bak/
 # Environment Files & Secrets
 .env
 .env.*
+!.env.example
 *.env
 *.pem
 *.key
@@ -66,3 +67,6 @@ wheels/
 # OS Files
 Thumbs.db
 .DS_Store
+
+# Generated PDF Exports & Test Artifacts
+*.pdf

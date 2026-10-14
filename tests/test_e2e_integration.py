@@ -128,11 +128,53 @@ def test_full_complaint_lifecycle(test_env):
     assert len(docket_pdf) > 1000  # PDF contains valid structured content
 
     kpis = db.get_kpis()
+    all_complaints_df = db.get_all_complaints()
+
+    # Category breakdown DataFrame
+    cat_df = all_complaints_df["category"].value_counts().reset_index()
+    cat_df.columns = ["category", "count"]
+    unres_map = {
+        cat: f"{all_complaints_df[(all_complaints_df['category'] == cat) & (all_complaints_df['status'].isin(['Pending', 'Assigned', 'In Progress']))].shape[0]} open"
+        for cat in cat_df["category"]
+    }
+    cat_df["unresolved"] = cat_df["category"].map(unres_map)
+
+    # Priority breakdown DataFrame
+    prio_df = all_complaints_df["priority"].value_counts().reset_index()
+    prio_df.columns = ["priority", "count"]
+    prio_rates = {}
+    for p in prio_df["priority"]:
+        tot = all_complaints_df[all_complaints_df["priority"] == p].shape[0]
+        res = all_complaints_df[(all_complaints_df["priority"] == p) & (all_complaints_df["status"].isin(["Resolved", "Closed"]))].shape[0]
+        rate = round((res / tot * 100), 1) if tot > 0 else 0.0
+        prio_rates[p] = f"{res}/{tot} ({rate}%)"
+    prio_df["rate"] = prio_df["priority"].map(prio_rates)
+
+    hotspots = {
+        "top_category": "Electrical",
+        "top_category_count": int(cat_df[cat_df["category"] == "Electrical"]["count"].iloc[0]) if not cat_df[cat_df["category"] == "Electrical"].empty else 1,
+        "top_location": "EEE Lab 2",
+        "top_location_count": 3,
+        "top_subcategory": "Fan / Ventilation",
+        "top_subcategory_count": 2,
+        "top_dept_backlog": "Electrical Maintenance Division (2 open tickets)"
+    }
+
     exec_pdf = create_summary_analytics_pdf(
+        kpis=kpis,
+        category_df=cat_df,
+        priority_df=prio_df,
+        hotspots=hotspots
+    )
+    assert isinstance(exec_pdf, bytes)
+    assert len(exec_pdf) > 2000
+
+    # Also test empty/None fallback robustness
+    fallback_pdf = create_summary_analytics_pdf(
         kpis=kpis,
         category_df=None,
         priority_df=None,
-        hotspots={"top_category": "Electrical", "top_category_count": 5}
+        hotspots={}
     )
-    assert isinstance(exec_pdf, bytes)
-    assert len(exec_pdf) > 1000
+    assert isinstance(fallback_pdf, bytes)
+    assert len(fallback_pdf) > 1000

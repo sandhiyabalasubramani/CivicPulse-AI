@@ -1,4 +1,4 @@
-﻿"""
+"""
 Complaint Status Tracker View for CivicPulse AI.
 Tracks complaints through the FastAPI PostgreSQL backend or local SQLite database.
 """

@@ -56,42 +56,100 @@ def render_reports_view():
             st.error(f"⚠️ Error fetching complaint metrics from backend: {str(e)}")
             kpis = {}
 
+        # Fallback or augment KPIs safely from df if missing or empty
+        status_col = df["status"] if "status" in df.columns else pd.Series(dtype=object)
+        prio_col = df["priority"] if "priority" in df.columns else pd.Series(dtype=object)
+
+        if not kpis or not kpis.get("total"):
+            total_cnt = len(df)
+            pending_cnt = int((status_col == "Pending").sum())
+            assigned_cnt = int((status_col == "Assigned").sum())
+            in_prog_cnt = int((status_col == "In Progress").sum())
+            resolved_cnt = int(status_col.isin(["Resolved", "Closed"]).sum())
+            high_cnt = int((prio_col == "High").sum())
+            crit_cnt = int((prio_col == "Critical").sum())
+            rate_cnt = round((resolved_cnt / total_cnt * 100.0), 1) if total_cnt > 0 else 0.0
+            kpis = {
+                "total": total_cnt,
+                "pending": pending_cnt,
+                "assigned": assigned_cnt,
+                "in_progress": in_prog_cnt,
+                "resolved": resolved_cnt,
+                "high_priority": high_cnt,
+                "critical_priority": crit_cnt,
+                "resolution_rate": rate_cnt,
+                "avg_resolution_hours": kpis.get("avg_resolution_hours", 0.0) if kpis else 0.0
+            }
+        elif "assigned" not in kpis:
+            kpis["assigned"] = int((status_col == "Assigned").sum())
+
         # Compute Category distribution DataFrame for PDF
-        cat_df = df["category"].value_counts().reset_index()
-        cat_df.columns = ["category", "count"]
-        
-        # Calculate unresolved per category
-        unresolved_map = {}
-        for cat in cat_df["category"]:
-            unres_cnt = df[(df["category"] == cat) & (df["status"].isin(["Pending", "Assigned", "In Progress"]))].shape[0]
-            unresolved_map[cat] = f"{unres_cnt} open"
-        cat_df["unresolved"] = cat_df["category"].map(unresolved_map)
+        if "category" in df.columns and not df["category"].dropna().empty:
+            cat_counts = df["category"].dropna().astype(str).str.strip().value_counts()
+            cat_df = cat_counts.reset_index()
+            cat_df.columns = ["category", "count"]
+
+            # Calculate unresolved per category
+            unresolved_map = {}
+            for cat in cat_df["category"]:
+                if "status" in df.columns:
+                    unres_cnt = df[(df["category"] == cat) & (df["status"].isin(["Pending", "Assigned", "In Progress"]))].shape[0]
+                else:
+                    unres_cnt = 0
+                unresolved_map[cat] = f"{unres_cnt} open"
+            cat_df["unresolved"] = cat_df["category"].map(unresolved_map)
+        else:
+            cat_df = pd.DataFrame(columns=["category", "count", "unresolved"])
 
         # Compute Priority distribution DataFrame for PDF
-        prio_df = df["priority"].value_counts().reset_index()
-        prio_df.columns = ["priority", "count"]
-        
-        prio_rates = {}
-        for p in prio_df["priority"]:
-            total_p = df[df["priority"] == p].shape[0]
-            res_p = df[(df["priority"] == p) & (df["status"].isin(["Resolved", "Closed"]))].shape[0]
-            rate = round((res_p / total_p * 100), 1) if total_p > 0 else 0.0
-            prio_rates[p] = f"{res_p}/{total_p} ({rate}%)"
-        prio_df["rate"] = prio_df["priority"].map(prio_rates)
+        if "priority" in df.columns and not df["priority"].dropna().empty:
+            prio_counts = df["priority"].dropna().astype(str).str.strip().value_counts()
+            prio_df = prio_counts.reset_index()
+            prio_df.columns = ["priority", "count"]
+
+            prio_rates = {}
+            for p in prio_df["priority"]:
+                total_p = df[df["priority"] == p].shape[0]
+                if "status" in df.columns:
+                    res_p = df[(df["priority"] == p) & (df["status"].isin(["Resolved", "Closed"]))].shape[0]
+                else:
+                    res_p = 0
+                rate = round((res_p / total_p * 100.0), 1) if total_p > 0 else 0.0
+                prio_rates[p] = f"{res_p}/{total_p} ({rate}%)"
+            prio_df["rate"] = prio_df["priority"].map(prio_rates)
+        else:
+            prio_df = pd.DataFrame(columns=["priority", "count", "rate"])
+
+        # Safe helper to compute statistical mode without IndexError on empty/null series
+        def _get_safe_mode(series: pd.Series, default: str = "N/A") -> str:
+            if series is None or series.empty:
+                return default
+            cleaned = series.dropna().astype(str).str.strip()
+            cleaned = cleaned[cleaned != ""]
+            if cleaned.empty:
+                return default
+            mode_s = cleaned.mode()
+            return str(mode_s.iloc[0]) if not mode_s.empty else default
 
         # Compute Hotspot info
-        top_cat = df["category"].mode()[0] if not df["category"].empty else "N/A"
-        top_cat_cnt = df[df["category"] == top_cat].shape[0] if top_cat != "N/A" else 0
+        top_cat = _get_safe_mode(df["category"]) if "category" in df.columns else "N/A"
+        top_cat_cnt = df[df["category"] == top_cat].shape[0] if (top_cat != "N/A" and "category" in df.columns) else 0
 
-        top_loc = df["location"].mode()[0] if not df["location"].empty else "N/A"
-        top_loc_cnt = df[df["location"] == top_loc].shape[0] if top_loc != "N/A" else 0
+        top_loc = _get_safe_mode(df["location"]) if "location" in df.columns else "N/A"
+        top_loc_cnt = df[df["location"] == top_loc].shape[0] if (top_loc != "N/A" and "location" in df.columns) else 0
 
-        top_sub = df["subcategory"].mode()[0] if not df["subcategory"].empty else "N/A"
-        top_sub_cnt = df[df["subcategory"] == top_sub].shape[0] if top_sub != "N/A" else 0
+        top_sub = _get_safe_mode(df["subcategory"]) if "subcategory" in df.columns else "N/A"
+        top_sub_cnt = df[df["subcategory"] == top_sub].shape[0] if (top_sub != "N/A" and "subcategory" in df.columns) else 0
 
-        pending_dept_df = df[df["status"].isin(["Pending", "Assigned", "In Progress"])]
-        top_dept = pending_dept_df["department"].mode()[0] if not pending_dept_df.empty else "None"
-        top_dept_cnt = pending_dept_df[pending_dept_df["department"] == top_dept].shape[0] if top_dept != "None" else 0
+        if "status" in df.columns and "department" in df.columns:
+            pending_dept_df = df[df["status"].isin(["Pending", "Assigned", "In Progress"])]
+            top_dept = _get_safe_mode(pending_dept_df["department"], default="None")
+            top_dept_cnt = pending_dept_df[pending_dept_df["department"] == top_dept].shape[0] if (top_dept != "None" and not pending_dept_df.empty) else 0
+        else:
+            top_dept = "None"
+            top_dept_cnt = 0
+
+        top_dept_backlog_text = f"{top_dept} ({top_dept_cnt} open tickets)" if top_dept != "None" else "None recorded"
 
         hotspots_dict = {
             "top_category": top_cat,
@@ -100,7 +158,7 @@ def render_reports_view():
             "top_location_count": top_loc_cnt,
             "top_subcategory": top_sub,
             "top_subcategory_count": top_sub_cnt,
-            "top_dept_backlog": f"{top_dept} ({top_dept_cnt} open tickets)"
+            "top_dept_backlog": top_dept_backlog_text
         }
 
         with st.spinner("Compiling PDF Executive Report..."):
@@ -132,12 +190,12 @@ def render_reports_view():
 
         if chosen_id:
             comp_record, comp_hist = api_client.get_complaint(chosen_id)
-            
+
             if comp_record:
                 st.write(f"**Selected Ticket:** `{chosen_id}` — *{comp_record['title']}* (Status: **{comp_record['status']}**)")
-                
+
                 single_pdf_bytes = create_complaint_docket_pdf(comp_record, comp_hist)
-                
+
                 st.download_button(
                     label=f"📥 Download Docket PDF ({chosen_id})",
                     data=single_pdf_bytes,
