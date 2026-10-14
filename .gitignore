@@ -39,6 +39,7 @@ venv.bak/
 *.db-shm
 civicpulse.db
 civicpulse_backup_before_postgresql.db
+*backup*.py
 
 # Build & Packaging
 build/

@@ -1,6 +1,7 @@
 """
 FastAPI Backend Client for CivicPulse AI.
-Provides unified access to PostgreSQL grievance records, analytics, and status workflows.
+Provides unified access to PostgreSQL grievance records, analytics, status workflows,
+and multi-tier configuration resolution (Streamlit secrets, environment variables, Render production default).
 """
 
 import logging
@@ -16,9 +17,80 @@ load_dotenv(PROJECT_ROOT / ".env")
 
 logger = logging.getLogger("civicpulse_client")
 
-API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
-ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
-DEFAULT_TIMEOUT = 10
+DEFAULT_PRODUCTION_API_URL = "https://civicpulse-ai-api-5g8h.onrender.com"
+DEFAULT_LOCAL_API_URL = "http://127.0.0.1:8000"
+DEFAULT_TIMEOUT = 25
+
+
+def get_stream_secret(key: str) -> Optional[str]:
+    """
+    Safely retrieves a configuration key from Streamlit secrets (st.secrets)
+    without raising errors if Streamlit is not executing or secrets file is absent.
+    """
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and key in st.secrets:
+            val = st.secrets[key]
+            if val is not None and str(val).strip():
+                return str(val).strip()
+    except Exception:
+        pass
+    return None
+
+
+def get_api_url() -> str:
+    """
+    Resolves the FastAPI backend base URL using documented precedence:
+    1. Streamlit Cloud Secrets: st.secrets["API_URL"]
+    2. Environment Variable: os.getenv("API_URL") (e.g. from local .env)
+    3. Production Default: https://civicpulse-ai-api-5g8h.onrender.com
+    """
+    # 1. Check Streamlit secrets
+    secret_url = get_stream_secret("API_URL")
+    if secret_url:
+        return secret_url.rstrip("/")
+
+    # 2. Check environment variable
+    env_url = os.getenv("API_URL")
+    if env_url and env_url.strip():
+        return env_url.strip().rstrip("/")
+
+    # Reload from .env if present
+    load_dotenv(PROJECT_ROOT / ".env", override=False)
+    env_url = os.getenv("API_URL")
+    if env_url and env_url.strip():
+        return env_url.strip().rstrip("/")
+
+    # 3. Fallback to production Render URL
+    return DEFAULT_PRODUCTION_API_URL
+
+
+def get_admin_api_key() -> str:
+    """
+    Resolves ADMIN_API_KEY using documented precedence:
+    1. Streamlit Cloud Secrets: st.secrets["ADMIN_API_KEY"]
+    2. Environment Variable: os.getenv("ADMIN_API_KEY")
+    3. Fallback: Empty string (fails closed for admin operations)
+    """
+    secret_key = get_stream_secret("ADMIN_API_KEY")
+    if secret_key:
+        return secret_key.strip()
+
+    env_key = os.getenv("ADMIN_API_KEY")
+    if env_key and env_key.strip():
+        return env_key.strip()
+
+    load_dotenv(PROJECT_ROOT / ".env", override=False)
+    env_key = os.getenv("ADMIN_API_KEY")
+    if env_key and env_key.strip():
+        return env_key.strip()
+
+    return ""
+
+
+# Module-level alias for backward compatibility
+API_URL = get_api_url()
+ADMIN_API_KEY = get_admin_api_key()
 
 
 class ApiResult:
@@ -63,23 +135,29 @@ class CivicPulseApiClient:
 
     def __init__(
         self,
-        base_url: str = API_URL,
+        base_url: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
         admin_api_key: Optional[str] = None
     ):
-        self.base_url = base_url.rstrip("/")
+        self._base_url = base_url.strip().rstrip("/") if base_url else None
         self.timeout = timeout
         self._admin_api_key = admin_api_key.strip() if admin_api_key is not None else None
+
+    @property
+    def base_url(self) -> str:
+        if self._base_url is not None:
+            return self._base_url
+        return get_api_url()
+
+    @base_url.setter
+    def base_url(self, value: Optional[str]):
+        self._base_url = value.strip().rstrip("/") if value else None
 
     @property
     def admin_api_key(self) -> str:
         if self._admin_api_key is not None:
             return self._admin_api_key.strip()
-        key = os.getenv("ADMIN_API_KEY")
-        if not key:
-            load_dotenv(PROJECT_ROOT / ".env", override=False)
-            key = os.getenv("ADMIN_API_KEY", "")
-        return (key or "").strip()
+        return get_admin_api_key()
 
     @admin_api_key.setter
     def admin_api_key(self, value: Optional[str]):
@@ -112,12 +190,66 @@ class CivicPulseApiClient:
         return "Server returned an error"
 
     def check_health(self) -> bool:
-        """Check if the FastAPI backend service is healthy."""
+        """Check if the FastAPI backend service is healthy and reachable."""
         try:
             resp = requests.get(f"{self.base_url}/health", timeout=self.timeout)
             return resp.status_code == 200
         except Exception:
             return False
+
+    def get_health_details(self) -> Dict[str, Any]:
+        """Retrieves structured diagnostic health report from the backend."""
+        try:
+            resp = requests.get(f"{self.base_url}/health", timeout=self.timeout)
+            if resp.status_code == 200:
+                return resp.json()
+            return {"status": "unhealthy", "status_code": resp.status_code}
+        except Exception as e:
+            return {"status": "unreachable", "error": str(e)}
+
+    def create_complaint(self, data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any], str]:
+        """
+        Submits a new grievance to the backend.
+        Returns (success, response_dict, message).
+        """
+        try:
+            resp = requests.post(
+                f"{self.base_url}/complaints",
+                json=data,
+                timeout=self.timeout
+            )
+            if resp.status_code in [200, 201]:
+                return True, resp.json(), "Complaint submitted successfully."
+            error_detail = self._extract_safe_error_detail(resp)
+            return False, {}, error_detail
+        except requests.exceptions.Timeout:
+            return False, {}, f"Request timed out after {self.timeout}s. Backend service took too long to respond."
+        except requests.exceptions.ConnectionError:
+            return False, {}, f"Unable to connect to backend service at {self.base_url}."
+        except Exception as e:
+            return False, {}, f"Submission failed: {str(e)}"
+
+    def analyze_complaint(self, data: Dict[str, Any]) -> Tuple[bool, Dict[str, Any], str]:
+        """
+        Analyzes a grievance using NLP, priority scoring, and department routing.
+        Returns (success, response_dict, message).
+        """
+        try:
+            resp = requests.post(
+                f"{self.base_url}/analyze",
+                json=data,
+                timeout=self.timeout
+            )
+            if resp.status_code == 200:
+                return True, resp.json(), "Analysis successful."
+            error_detail = self._extract_safe_error_detail(resp)
+            return False, {}, error_detail
+        except requests.exceptions.Timeout:
+            return False, {}, f"Analysis timed out after {self.timeout}s."
+        except requests.exceptions.ConnectionError:
+            return False, {}, f"Unable to connect to backend service at {self.base_url}."
+        except Exception as e:
+            return False, {}, f"Analysis request failed: {str(e)}"
 
     def get_complaint(
         self, complaint_id: str
@@ -346,6 +478,11 @@ class CivicPulseApiClient:
                 else:
                     msg = "Backend server error while updating complaint status. Please try again later."
                 return ApiResult(False, msg, status_code=500)
+
+            elif resp.status_code == 503:
+                return ApiResult(
+                    False, f"Backend database service is temporarily unavailable: {error_detail}", status_code=503
+                )
 
             else:
                 return ApiResult(

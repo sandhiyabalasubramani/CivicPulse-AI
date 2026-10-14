@@ -1,14 +1,17 @@
 from fastapi import FastAPI, HTTPException, Depends, Header, Security, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, field_validator
 from pathlib import Path
+from contextlib import asynccontextmanager
 import sys
 import uuid
 from datetime import datetime
 import os
 import logging
 import hmac
+import psycopg
 from dotenv import load_dotenv
 from typing import Optional, List, Dict, Any
 
@@ -39,17 +42,51 @@ from modules.complaint_analyzer import get_analyzer
 from modules.priority_engine import get_priority_engine
 from modules.department_router import get_department_router
 from modules.similarity_engine import get_similarity_engine
-from backend.database import get_connection
+from backend.database import get_connection, ensure_schema, check_db_status, close_pool
 
 
 # ============================================================
 # FASTAPI APP & AUTHENTICATION CONFIGURATION
 # ============================================================
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    FastAPI lifespan context manager:
+    1. Verifies/initializes PostgreSQL schema at startup (safe & idempotent).
+    2. Closes database connection pool on shutdown.
+    """
+    logger.info("CivicPulse AI API starting up...")
+    try:
+        init_res = ensure_schema()
+        if init_res.get("success"):
+            logger.info("Database schema verification/initialization successful.")
+        else:
+            logger.warning("Database schema startup check: %s", init_res.get("message"))
+    except Exception as e:
+        logger.error("Failed to verify/initialize database schema at startup: %s", e)
+    yield
+    logger.info("CivicPulse AI API shutting down...")
+    try:
+        close_pool()
+    except Exception:
+        pass
+
+
 app = FastAPI(
     title="CivicPulse AI API",
     description="Intelligent Grievance & Resolution Platform API",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Enable CORS for Streamlit Cloud and local development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 admin_bearer_scheme = HTTPBearer(auto_error=False)
@@ -201,9 +238,19 @@ def root():
 
 @app.get("/health")
 def health():
+    db_info = check_db_status()
+    is_connected = db_info.get("connected", False)
     return {
         "status": "healthy",
-        "service": "CivicPulse AI API"
+        "service": "CivicPulse AI API",
+        "database": {
+            "status": "connected" if is_connected else "disconnected",
+            "configured": db_info.get("configured", False),
+            "tables_ready": db_info.get("tables_ready", False),
+            "complaints_count": db_info.get("complaints_count", 0),
+            "status_history_count": db_info.get("status_history_count", 0),
+            "detail": db_info.get("detail", "")
+        }
     }
 
 
@@ -264,19 +311,50 @@ def complaints_count():
     conn = None
     try:
         conn = get_connection()
-        with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM complaints")
-            complaints = cur.fetchone()[0]
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM complaints")
+                complaints = cur.fetchone()[0]
 
-            cur.execute("SELECT COUNT(*) FROM status_history")
-            status_history = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM status_history")
+                status_history = cur.fetchone()[0]
 
-        return {
-            "status": "success",
-            "complaints": complaints,
-            "status_history": status_history
-        }
+            return {
+                "status": "success",
+                "complaints": complaints,
+                "status_history": status_history
+            }
+        except psycopg.errors.UndefinedTable:
+            # Self-healing: if schema tables were missing, auto-create them and retry
+            logger.info("Tables not found in /complaints/count. Ensuring schema...")
+            if conn:
+                try:
+                    conn.rollback()
+                    conn.close()
+                except Exception:
+                    pass
+                conn = None
+            ensure_schema()
+            conn = get_connection()
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM complaints")
+                complaints = cur.fetchone()[0]
 
+                cur.execute("SELECT COUNT(*) FROM status_history")
+                status_history = cur.fetchone()[0]
+
+            return {
+                "status": "success",
+                "complaints": complaints,
+                "status_history": status_history
+            }
+
+    except RuntimeError as re:
+        logger.error("Database configuration error in /complaints/count: %s", re)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database service unavailable: {str(re)}"
+        )
     except Exception as e:
         logger.error("Failed to fetch complaint counts: %s", e, exc_info=True)
         raise HTTPException(

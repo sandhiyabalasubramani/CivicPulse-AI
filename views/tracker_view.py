@@ -246,8 +246,8 @@ def render_tracker_view() -> None:
                 with st.spinner(f"Retrieving complaint status for reference `{query_id}`..."):
                     try:
                         resp = requests.get(
-                            f"{API_URL}/complaints/{query_id}",
-                            timeout=10,
+                            f"{api_client.base_url}/complaints/{query_id}",
+                            timeout=api_client.timeout,
                         )
 
                         if resp.status_code == 200:
@@ -308,15 +308,11 @@ def render_tracker_view() -> None:
                             f"An unexpected error occurred: {str(e)}"
                         )
 
-        # Display results and messages from state
         id_err = st.session_state.get("tracker_id_error")
         if id_err == "connectionError":
             st.error(
-                "❌ The FastAPI backend service is unreachable at `http://127.0.0.1:8000`.\n\n"
-                "Please verify that the backend server is active:\n"
-                "```bash\n"
-                "uvicorn backend.main:app --reload\n"
-                "```"
+                f"❌ The FastAPI backend service is unreachable at `{api_client.base_url}`.\n\n"
+                "Please verify that the Render backend is live or configure `API_URL` in your Streamlit secrets."
             )
         elif id_err and id_err.startswith("notFound:"):
             missing_cid = id_err.split("notFound:", 1)[1]
@@ -380,11 +376,8 @@ def render_tracker_view() -> None:
                     except requests.exceptions.ConnectionError:
                         st.session_state["tracker_email_results"] = None
                         st.error(
-                            "❌ The FastAPI backend service is unreachable at `http://127.0.0.1:8000`.\n\n"
-                            "Please ensure the backend application is running:\n"
-                            "```bash\n"
-                            "uvicorn backend.main:app --reload\n"
-                            "```"
+                            f"❌ The FastAPI backend service is unreachable at `{api_client.base_url}`.\n\n"
+                            "Please verify that the Render backend is live or configure `API_URL` in your Streamlit secrets."
                         )
                     except Exception as e:
                         st.session_state["tracker_email_results"] = None

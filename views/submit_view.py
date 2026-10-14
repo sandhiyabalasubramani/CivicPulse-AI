@@ -3,7 +3,7 @@ import streamlit as st
 from datetime import datetime
 
 from utils.validators import validate_complaint_form
-from utils.api_client import API_URL
+from utils.api_client import api_client, API_URL
 
 
 def render_submit_view():
@@ -127,63 +127,51 @@ def render_submit_view():
     }
 
     with st.spinner("CivicPulse AI is analyzing your complaint..."):
-
+        api_url = api_client.base_url
         try:
-
             api_response = requests.post(
-                f"{API_URL}/complaints",
+                f"{api_url}/complaints",
                 json=payload,
-                timeout=15
+                timeout=api_client.timeout
             )
 
             if api_response.status_code not in [200, 201]:
-
                 st.error(
-                    f"Backend rejected the complaint "
-                    f"(HTTP {api_response.status_code})"
+                    f"Backend rejected the complaint (HTTP {api_response.status_code})"
                 )
-
                 try:
                     st.json(api_response.json())
                 except Exception:
                     st.code(api_response.text)
-
                 return
 
             api_data = api_response.json()
 
         except requests.exceptions.ConnectionError:
-
             st.error(
-                "FastAPI backend is not running.\n\n"
-                "Start it with:\n"
-                "uvicorn backend.main:app --reload"
+                f"⚠️ Unable to connect to CivicPulse AI backend at `{api_url}`.\n\n"
+                "Please verify that the Render backend is live or configure `API_URL` in your Streamlit secrets."
             )
-
             return
 
         except requests.exceptions.Timeout:
-
             st.error(
-                "FastAPI backend request timed out."
+                f"⏱️ The request to CivicPulse AI backend (`{api_url}`) timed out after {api_client.timeout}s. "
+                "If running on Render free tier, the backend may take up to a minute to wake up from sleep. "
+                "Please try again in a few moments."
             )
-
             return
 
         except requests.exceptions.RequestException as e:
-
             st.error(
-                f"Backend connection error: {e}"
+                f"Backend communication error: {e}"
             )
-
             return
 
         except Exception as e:
-
             st.error(
                 f"Unexpected error: {e}"
             )
-
             return
 
     if api_data.get("status") != "success":
