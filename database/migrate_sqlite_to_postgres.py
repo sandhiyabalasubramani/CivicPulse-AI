@@ -1,9 +1,17 @@
 import sqlite3
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
 import psycopg
 
-load_dotenv()
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from backend.database import normalize_database_url
+
+load_dotenv(PROJECT_ROOT / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -11,11 +19,12 @@ if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL not found in .env")
 
 # Connect to SQLite
-sqlite_conn = sqlite3.connect("civicpulse.db")
+sqlite_path = PROJECT_ROOT / "civicpulse.db"
+sqlite_conn = sqlite3.connect(str(sqlite_path))
 sqlite_cur = sqlite_conn.cursor()
 
-# Connect to PostgreSQL
-pg_conn = psycopg.connect(DATABASE_URL)
+# Connect to PostgreSQL with cloud SSL normalization
+pg_conn = psycopg.connect(normalize_database_url(DATABASE_URL))
 pg_cur = pg_conn.cursor()
 
 try:
