@@ -117,11 +117,11 @@ flowchart TD
     end
 
     subgraph Frontend["Streamlit Presentation Tier (Cloud / Local)"]
-        UI_Submit["📝 Submit Grievance View"]
-        UI_Track["🔍 Track Status View"]
-        UI_Admin["🛡️ Admin Operations View"]
-        UI_Analytics["📊 Analytics & Hotspots View"]
-        UI_Reports["📑 Reports & PDF Export View"]
+        UI_Submit["Submit Grievance View"]
+        UI_Track["Track Status View"]
+        UI_Admin["Admin Operations View"]
+        UI_Analytics["Analytics and Hotspots View"]
+        UI_Reports["Reports and PDF Export View"]
         API_Client["Unified API Client (utils/api_client.py)"]
         PDF_Local["ReportLab PDF Generator (modules/report_generator.py)"]
     end
@@ -130,7 +130,7 @@ flowchart TD
         API_Router["FastAPI Application (backend/main.py)"]
         Auth["Constant-Time HMAC Admin Auth Guard"]
         
-        subgraph NLP_Engines["Intelligence & Triage Engines"]
+        subgraph NLP_Engines["Intelligence and Triage Engines"]
             Analyzer["Complaint Analyzer (modules/complaint_analyzer.py)"]
             Priority["Priority Engine (modules/priority_engine.py)"]
             Router["Department Router (modules/department_router.py)"]
@@ -141,7 +141,7 @@ flowchart TD
     end
 
     subgraph Database["Persistence Tier (Neon PostgreSQL)"]
-        PG_DB[(PostgreSQL Database)]
+        PG_DB[("PostgreSQL Database")]
         T_Comp["Table: complaints"]
         T_Hist["Table: status_history"]
         PG_DB --> T_Comp
@@ -194,38 +194,37 @@ The diagram below details the sequence of operations executed from the moment a 
 
 ```mermaid
 flowchart TD
-    Start([User Submits Complaint Form]) --> ValCheck{Input Validation<br/>Email & Fields OK?}
+    Start(["User Submits Complaint Form"]) --> ValCheck{"Input Validation<br/>Email and Fields Valid?"}
     
-    ValCheck -- No --> ShowErr[Display Form Validation Error]
-    ValCheck -- Yes --> CallAPI[POST /complaints Payload to FastAPI]
+    ValCheck -- No --> ShowErr["Display Form Validation Error"]
+    ValCheck -- Yes --> CallAPI["POST /complaints Payload to FastAPI"]
 
-    CallAPI --> TriageNode[1. Complaint Analyzer<br/>Taxonomy Keyword & Subcategory Matching]
-    TriageNode --> PrioNode[2. Priority Engine<br/>Scan Hazard Signals -> Assign Score & SLA]
-    PrioNode --> RouteNode[3. Department Router<br/>Determine Maintenance Division & Support Contact]
+    CallAPI --> TriageNode["1. Complaint Analyzer<br/>Taxonomy Keyword and Subcategory Matching"]
+    TriageNode --> PrioNode["2. Priority Engine<br/>Scan Hazard Signals to Assign Score and SLA"]
+    PrioNode --> RouteNode["3. Department Router<br/>Determine Maintenance Division and Support Contact"]
     
-    RouteNode --> FetchHistory[Fetch Existing Complaint Corpus from DB]
-    FetchHistory --> SimNode[4. Similarity Engine<br/>TF-IDF Vectorization & Cosine Similarity Evaluation]
+    RouteNode --> FetchHistory["Fetch Existing Complaint Corpus from DB"]
+    FetchHistory --> SimNode["4. Similarity Engine<br/>TF-IDF Vectorization and Cosine Similarity Evaluation"]
 
-    SimNode --> IDGen[Generate Unique Reference ID: CP-XXXXXXXX]
-    IDGen --> DBInsert[Insert Record into PostgreSQL 'complaints'<br/>Insert Initial Entry into 'status_history']
+    SimNode --> IDGen["Generate Unique Reference ID: CP-XXXXXXXX"]
+    IDGen --> DBInsert["Insert Record into PostgreSQL 'complaints'<br/>Insert Initial Entry into 'status_history'"]
     
-    DBInsert --> Resp201[Return HTTP 201 Success Response]
-    Resp201 --> ShowConfirm[Display Interactive AI Triage Card to Citizen]
+    DBInsert --> Resp201["Return HTTP 201 Success Response"]
+    Resp201 --> ShowConfirm["Display Interactive AI Triage Card to Citizen"]
 
-    ShowConfirm --> CitizenTrack[Citizen Tracks Ticket via Reference ID or Email]
-    ShowConfirm --> AdminReview[Admin Inspects Grievance in Control Center]
+    ShowConfirm --> CitizenTrack["Citizen Tracks Ticket via Reference ID or Email"]
+    ShowConfirm --> AdminReview["Admin Inspects Grievance in Control Center"]
 
-    AdminReview --> StatusUpdate{Admin Updates Status<br/>Pending -> Assigned -> In Progress -> Resolved}
-    StatusUpdate --> PutReq[PUT /complaints/:id/status<br/>Validated via Secret Admin Key]
-    PutReq --> LogHistory[Update 'complaints' Table<br/>Append Entry to 'status_history']
+    AdminReview --> StatusUpdate{"Admin Updates Status<br/>Pending to Assigned to In Progress to Resolved"}
+    StatusUpdate --> PutReq["PUT /complaints/:id/status<br/>Validated via Secret Admin Key"]
+    PutReq --> LogHistory["Update 'complaints' Table<br/>Append Entry to 'status_history'"]
 
-    LogHistory --> AnalyticsSink[Plotly Hotspot Analytics Updated]
-    LogHistory --> PDFExport[Generate Official PDF Docket / Executive Summary]
+    LogHistory --> AnalyticsSink["Plotly Hotspot Analytics Updated"]
+    LogHistory --> PDFExport["Generate Official PDF Docket and Executive Summary"]
 
     classDef step fill:#FFFFFF,stroke:#0284C7,stroke-width:2px;
     classDef decision fill:#FEF3C7,stroke:#D97706,stroke-width:2px;
     classDef err fill:#FEE2E2,stroke:#DC2626,stroke-width:2px;
-    classDef finish fill:#DCFCE7,stroke:#16A34A,stroke-width:2px;
 
     class Start,CallAPI,TriageNode,PrioNode,RouteNode,FetchHistory,SimNode,IDGen,DBInsert,Resp201,ShowConfirm,CitizenTrack,AdminReview,PutReq,LogHistory,AnalyticsSink,PDFExport step;
     class ValCheck,StatusUpdate decision;
@@ -362,6 +361,8 @@ ADMIN_API_KEY=your_secure_random_admin_api_key_here
 API_URL=http://127.0.0.1:8000
 ```
 *(Never commit `.env` containing real credentials to version control).*
+
+> 💡 **Port Consistency:** Port `8000` is the standard local development port configured identically across `.env.example`, `utils/api_client.py`, and `README.md`. If port `8000` is already in use by another service on your machine, you can run Uvicorn on an alternate port (e.g. `--port 8001`) and update `API_URL=http://127.0.0.1:8001` in your `.env` file accordingly.
 
 ### 6. Start the FastAPI Backend
 In your active terminal, run:
