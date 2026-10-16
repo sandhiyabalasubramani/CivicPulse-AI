@@ -5,7 +5,10 @@ Features high-contrast accessible typography (Poppins + Inter), custom KPI cards
 visual status steppers, AI analysis cards, and chronological audit timelines.
 """
 
+import base64
+from functools import lru_cache
 from html import escape
+import os
 from typing import Any, Dict, List, Optional
 import streamlit as st
 
@@ -122,6 +125,56 @@ def inject_custom_css() -> None:
             color: var(--cp-text-sub);
             margin-bottom: 1.25rem;
             line-height: 1.55;
+        }
+
+        /* --------------------------------------------------
+           CivicPulse AI Smart City Hero Banner
+        -------------------------------------------------- */
+        .civicpulse-hero-container {
+            width: 100%;
+            margin: 0 0 1.5rem 0;
+            border-radius: 18px;
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.45) 0%, rgba(6, 182, 212, 0.6) 50%, rgba(99, 102, 241, 0.45) 100%);
+            box-shadow: 0 12px 36px -6px rgba(37, 99, 235, 0.2), 0 4px 18px -2px rgba(6, 182, 212, 0.16);
+            transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .civicpulse-hero-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 44px -4px rgba(37, 99, 235, 0.28), 0 6px 24px rgba(6, 182, 212, 0.24);
+        }
+
+        .civicpulse-hero-frame {
+            width: 100%;
+            background: #090D1A;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .civicpulse-hero-img {
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            aspect-ratio: 1672 / 941;
+            object-fit: contain;
+            display: block;
+            vertical-align: middle;
+            border-radius: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .civicpulse-hero-container {
+                margin-bottom: 1.2rem;
+                border-radius: 14px;
+            }
+            .civicpulse-hero-frame,
+            .civicpulse-hero-img {
+                border-radius: 12px;
+            }
         }
 
         /* --------------------------------------------------
@@ -589,8 +642,94 @@ def render_metric_card(
 
 
 # =========================================================
-# PAGE HERO HEADER
+# HERO BANNER & PAGE HEADER
 # =========================================================
+
+def get_hero_banner_path() -> Optional[str]:
+    """
+    Resolves the absolute filesystem path to the CivicPulse AI hero banner image.
+    Derives path reliably from project root, checking static/ and assets/.
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(current_dir)
+    filename = "CivicPulse AI Smart City Platform.png"
+
+    candidate_paths = [
+        os.path.join(project_root, "static", filename),
+        os.path.join(project_root, "assets", filename),
+        os.path.abspath(os.path.join("static", filename)),
+        os.path.abspath(os.path.join("assets", filename)),
+    ]
+    for path in candidate_paths:
+        if os.path.isfile(path) and os.path.getsize(path) > 1000:
+            return os.path.abspath(path)
+    return None
+
+
+@lru_cache(maxsize=1)
+def _get_hero_banner_base64() -> Optional[str]:
+    """
+    Locates and encodes the CivicPulse AI Smart City Platform image as base64.
+    Searches static/ and assets/ across project root.
+    Caches result in memory for instantaneous re-renders.
+    """
+    img_path = get_hero_banner_path()
+    if img_path:
+        try:
+            with open(img_path, "rb") as f:
+                return base64.b64encode(f.read()).decode("utf-8")
+        except Exception:
+            return None
+    return None
+
+
+def render_hero_banner(
+    alt_text: str = "CivicPulse AI — Intelligent Grievance Platform"
+) -> None:
+    """
+    Renders the official CivicPulse AI Smart City Platform hero banner.
+    Preserves original aspect ratio without distortion or cropping,
+    provides fully responsive styling on desktop and mobile,
+    and includes accessible alt text matching enterprise standards.
+    """
+    b64_img = _get_hero_banner_base64()
+
+    if b64_img:
+        # Load local image via embedded base64 data URI to guarantee instant,
+        # bulletproof display without network roundtrip failures or SPA router intercepts.
+        banner_html = f"""
+        <div class="civicpulse-hero-container" role="region" aria-label="{escape(alt_text)}">
+            <div class="civicpulse-hero-frame">
+                <img
+                    src="data:image/png;base64,{b64_img}"
+                    alt="{escape(alt_text)}"
+                    class="civicpulse-hero-img"
+                    loading="eager"
+                />
+            </div>
+        </div>
+        """
+        st.markdown(banner_html, unsafe_allow_html=True)
+    else:
+        # Graceful fallback only if banner image file genuinely cannot load
+        fallback_path = get_hero_banner_path()
+        if fallback_path and os.path.exists(fallback_path):
+            st.image(fallback_path, use_container_width=True)
+        else:
+            st.markdown(
+                f"""
+                <div class="civicpulse-hero-container" role="region" aria-label="{escape(alt_text)}">
+                    <div class="civicpulse-hero-frame" style="padding: 24px 20px; text-align: center; color: #94A3B8;">
+                        <span style="font-size: 1.5rem; margin-right: 8px;">🏛️</span>
+                        <span style="font-family: 'Poppins', sans-serif; font-weight: 600; color: #FFFFFF;">
+                            {escape(alt_text)}
+                        </span>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
 
 def render_header(
     title: str,

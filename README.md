@@ -1,1270 +1,529 @@
-# CivicPulse AI
+<div align="center">
 
-## Intelligent Complaint Management and Resolution Analytics Platform
+# 🏛️ CivicPulse AI
+### AI-Powered Institutional Grievance Management & Hotspot Analytics Platform
 
-CivicPulse AI is a software platform designed to simplify the process of submitting, analyzing, prioritizing, routing, tracking, and reporting civic complaints.
+An enterprise-grade grievance management, automated triage, and operational intelligence platform designed for universities, corporate campuses, and large-scale institutions.
 
-The system combines rule-based text processing, similarity analysis, priority evaluation, department routing, database management, analytics, and report generation into a single application.
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.35%2B-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Neon](https://img.shields.io/badge/Neon-Serverless_PostgreSQL-00E599?style=for-the-badge&logo=neon&logoColor=black)](https://neon.tech/)
+[![Scikit-Learn](https://img.shields.io/badge/scikit--learn-TF--IDF_%26_Cosine-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![Plotly](https://img.shields.io/badge/Plotly-Interactive_Analytics-3F4F75?style=for-the-badge&logo=plotly&logoColor=white)](https://plotly.com/)
+[![ReportLab](https://img.shields.io/badge/ReportLab-PDF_Generation-D12420?style=for-the-badge)](https://www.reportlab.com/)
+[![Render](https://img.shields.io/badge/Render-Backend_Hosting-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/)
+[![Tests](https://img.shields.io/badge/Tests-99%20Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
 
-It is designed as an academic and portfolio project demonstrating how software engineering, data processing, and AI-assisted techniques can be applied to a real-world complaint management workflow.
+<br/>
+
+[🚀 Live Streamlit Application](https://civicpulse-ai-bqh964obd3wqrgkvsp82kk.streamlit.app/) • [⚡ FastAPI Backend Service](https://civicpulse-ai-api-5g8h.onrender.com) • [📖 Interactive Swagger API Docs](https://civicpulse-ai-api-5g8h.onrender.com/docs) • [💻 GitHub Repository](https://github.com/sandhiyabalasubramani/CivicPulse-AI)
+
+</div>
 
 ---
 
-## 1. What Problem Does CivicPulse AI Solve?
+## 📋 Project Overview
 
-In a traditional complaint management system, complaints may need to be manually:
+Institutional facility management across universities, colleges, and municipal offices frequently suffers from communication bottlenecks. Grievance reports submitted via disconnected spreadsheets, phone calls, or paper forms often lack categorization, miss urgency assessments, lead to duplicate maintenance dispatches, and provide zero status transparency to citizens.
 
-* Read and understood
-* Categorized
-* Assigned to departments
-* Prioritized
-* Checked for duplicate complaints
-* Updated through different statuses
-* Analyzed for recurring issues
-* Converted into reports
+**CivicPulse AI** solves this operational deficit by uniting modern full-stack web technologies with deterministic NLP intelligence. The platform automates the grievance intake lifecycle:
+- Ingests institutional complaints through an accessible, mobile-responsive web portal.
+- Classifies grievances into distinct categories and subcategories using an institutional domain taxonomy.
+- Evaluates urgency and safety hazards to assign deterministic priority levels and binding Service Level Agreements (SLAs).
+- Discovers potential duplicate filings and recurring problems using **TF-IDF vectorization and cosine similarity**.
+- Automatically routes grievances to designated maintenance divisions.
+- Maintains an immutable, chronological status audit log throughout the resolution lifecycle.
+- Empowers executives with interactive Plotly analytics to identify systemic failure hotspots and generate downloadable PDF reports.
 
-This can make complaint handling slower and make it difficult to identify recurring problems.
+> **Technical Clarification on AI Capabilities:**  
+> CivicPulse AI employs **deterministic rule-based triage** (domain taxonomy keyword graphs and priority signal matching) combined with **scikit-learn TF-IDF vector embeddings and cosine similarity analysis** for duplicate discovery. The platform deliberately does not rely on opaque deep learning models or generative AI hallucinations, ensuring that institutional priority assignments and department routings remain 100% explainable, deterministic, and auditable.
 
-CivicPulse AI automates several of these steps.
+---
 
-A complaint can move through the following workflow:
+## 🌐 Live Demo
 
-```text
-Citizen Complaint
-       |
-       v
-Text Processing
-       |
-       v
-Complaint Analysis
-       |
-       +------------------+
-       |                  |
-       v                  v
-Category Detection    Priority Evaluation
-       |                  |
-       +--------+---------+
-                |
-                v
-        Department Routing
-                |
-                v
-      Similar Complaint Check
-                |
-                v
-        Complaint Tracking
-                |
-                v
-            Analytics
-                |
-                v
-          Report Generation
+The platform is deployed and fully accessible online:
+
+| Component | Endpoint Link | Deployment Environment |
+| :--- | :--- | :--- |
+| **Streamlit Web Application** | [civicpulse-ai.streamlit.app](https://civicpulse-ai-bqh964obd3wqrgkvsp82kk.streamlit.app/) | Streamlit Community Cloud |
+| **FastAPI Backend Server** | [civicpulse-ai-api-5g8h.onrender.com](https://civicpulse-ai-api-5g8h.onrender.com) | Render Web Service |
+| **Interactive API Documentation** | [civicpulse-ai-api-5g8h.onrender.com/docs](https://civicpulse-ai-api-5g8h.onrender.com/docs) | Swagger UI / OpenAPI 3.0 |
+| **Source Code Repository** | [github.com/sandhiyabalasubramani/CivicPulse-AI](https://github.com/sandhiyabalasubramani/CivicPulse-AI) | GitHub |
+
+> ⏳ **Note on Cloud Service Wake-Up:**  
+> The FastAPI backend service is hosted on Render's free tier. If the service has been inactive, the server automatically spins down to conserve resources and may require 30 to 60 seconds to wake up upon receiving the first web request.
+
+---
+
+## ✨ Key Features
+
+Each core capability in CivicPulse AI is implemented and verified against the repository codebase:
+
+1. **Institutional Complaint Submission:** Provides a structured multi-section web form for logging facility grievances with client-side and server-side validation.
+2. **Complainant Identification & Complaint Details:** Collects verified complainant contact details, location contexts, descriptive titles, and detailed incident explanations.
+3. **Category & Subcategory Classification:** Automatically categorizes grievances across 7 institutional domains (Electrical, Water & Plumbing, Network & IT, Cleaning & Sanitation, Infrastructure & Civil, Equipment & Machinery, Other) using taxonomy keyword matching.
+4. **Priority Assessment & SLA Assignment:** Computes deterministic severity tiers (Critical, High, Medium, Low) with explicit explainability signals and assigns target resolution deadlines.
+5. **Department Routing:** Automatically allocates complaints to the appropriate division (e.g. Substation Operations, HVAC Unit, Desktop Hardware Cell) based on subcategory rules.
+6. **TF-IDF & Cosine Similarity Detection:** Vectorizes incoming complaint text using scikit-learn and calculates cosine similarity against historical records to flag potential duplicates.
+7. **Complaint Reference ID Generation:** Issues a unique, non-sequential reference identifier formatted as `CP-XXXXXXXX` for every submitted ticket.
+8. **Complaint Tracking:** Enables citizens to look up live status timelines, metadata cards, and audit histories using either their Reference ID or registered email address.
+9. **Admin Dashboard & Complaint Search:** Provides campus administrators with real-time KPI tiles, multi-parameter filtering, full-text keyword searches, and a tabular grievance management grid.
+10. **Status Updates & Audit History:** Facilitates administrative state transitions (`Pending` → `Assigned` → `In Progress` → `Resolved` → `Closed`) while writing timestamped audit entries to the database.
+11. **Analytics, Charts & Complaint Hotspots:** Renders interactive Plotly visual charts breaking down category distributions, department workloads, average resolution hours, and high-frequency problem hotspots.
+12. **PDF Complaint Docket & Report Generation:** Compiles and exports printable, publication-grade individual resolution dockets and institutional executive summary briefing PDFs using ReportLab.
+13. **PostgreSQL Database Persistence:** Stores all complaint metadata, foreign keys, timestamps, and status transition logs in a hosted PostgreSQL database with connection pooling.
+14. **FastAPI Backend & Health-Check Endpoint:** Exposes a high-performance RESTful API with automated schema initialization, constant-time administrative authentication, and detailed `/health` diagnostics.
+
+---
+
+## 📸 Visual Overview and Interface Gallery
+
+CivicPulse AI features a clean, responsive interface powered by modern glassmorphic styling, real-time KPI metrics, Plotly analytics, and ReportLab document export.
+
+<div align="center">
+
+![CivicPulse AI Smart City Platform](assets/CivicPulse%20AI%20Smart%20City%20Platform.png)
+
+*CivicPulse AI — Intelligent Grievance Management & Hotspot Analytics Platform Overview*
+
+</div>
+
+### Verified Platform Views & Capabilities
+| View / Module | Primary Capabilities & Workflow |
+| :--- | :--- |
+| **📝 Submit Complaint** | Multi-card intake form with complainant details, location, description, auto-categorization, priority scoring, and department routing. |
+| **🔍 Track Complaint** | Visual 5-stage status progress pipeline (`Pending` → `Assigned` → `In Progress` → `Resolved` → `Closed`), incident metadata card, audit history, and PDF docket export. |
+| **🛡️ Admin Operations** | Administrative control center with live KPI summary tiles, multi-parameter search/filters, tabular complaint grid, and secure status transitions. |
+| **📊 Analytics & Hotspots** | Plotly telemetry dashboard displaying category distribution, department workload allocation, resolution timelines, and recurring hotspot analytics. |
+| **📑 Reports & PDF Export** | Document export center generating printable individual complaint dockets (`.pdf`), executive briefing summaries (`.pdf`), and raw CSV records. |
+
+> 📷 **Screenshot Capture Guidelines:**  
+> For instructions on capturing and contributing UI screenshots from the live deployment or local environment, refer to [`docs/screenshots/README.md`](docs/screenshots/README.md).
+
+---
+
+## 🏗️ System Architecture Diagram
+
+CivicPulse AI adopts a decoupled client-server architecture. The Streamlit frontend interacts with the FastAPI backend over secure HTTP REST protocols, while the backend mediates all database queries and NLP intelligence evaluations.
+
+```mermaid
+flowchart TD
+    subgraph Users["Platform Actors"]
+        Student["Complainant / Student / Staff"]
+        Admin["Campus Administrator / Technician"]
+    end
+
+    subgraph Frontend["Streamlit Presentation Tier (Cloud / Local)"]
+        UI_Submit["📝 Submit Grievance View"]
+        UI_Track["🔍 Track Status View"]
+        UI_Admin["🛡️ Admin Operations View"]
+        UI_Analytics["📊 Analytics & Hotspots View"]
+        UI_Reports["📑 Reports & PDF Export View"]
+        API_Client["Unified API Client (utils/api_client.py)"]
+        PDF_Local["ReportLab PDF Generator (modules/report_generator.py)"]
+    end
+
+    subgraph Backend["FastAPI REST Application Tier (Render / Local)"]
+        API_Router["FastAPI Application (backend/main.py)"]
+        Auth["Constant-Time HMAC Admin Auth Guard"]
+        
+        subgraph NLP_Engines["Intelligence & Triage Engines"]
+            Analyzer["Complaint Analyzer (modules/complaint_analyzer.py)"]
+            Priority["Priority Engine (modules/priority_engine.py)"]
+            Router["Department Router (modules/department_router.py)"]
+            Similarity["Similarity Engine (modules/similarity_engine.py)"]
+        end
+
+        DB_Pool["PostgreSQL Connection Pool (backend/database.py)"]
+    end
+
+    subgraph Database["Persistence Tier (Neon PostgreSQL)"]
+        PG_DB[(PostgreSQL Database)]
+        T_Comp["Table: complaints"]
+        T_Hist["Table: status_history"]
+        PG_DB --> T_Comp
+        PG_DB --> T_Hist
+    end
+
+    Student --> UI_Submit
+    Student --> UI_Track
+    Admin --> UI_Admin
+    Admin --> UI_Analytics
+    Admin --> UI_Reports
+
+    UI_Submit --> API_Client
+    UI_Track --> API_Client
+    UI_Admin --> API_Client
+    UI_Analytics --> API_Client
+    UI_Reports --> API_Client
+
+    UI_Track -.-> PDF_Local
+    UI_Reports -.-> PDF_Local
+
+    API_Client -- "HTTPS / JSON REST" --> API_Router
+    API_Router --> Auth
+    API_Router --> Analyzer
+    API_Router --> Priority
+    API_Router --> Router
+    API_Router --> Similarity
+    API_Router --> DB_Pool
+
+    DB_Pool -- "psycopg3 (sslmode=require)" --> PG_DB
+
+    classDef userNode fill:#EFF6FF,stroke:#2563EB,stroke-width:2px;
+    classDef feNode fill:#F8FAFC,stroke:#64748B,stroke-width:1px;
+    classDef beNode fill:#F0FDF4,stroke:#16A34A,stroke-width:1px;
+    classDef dbNode fill:#FAF5FF,stroke:#9333EA,stroke-width:1px;
+
+    class Student,Admin userNode;
+    class UI_Submit,UI_Track,UI_Admin,UI_Analytics,UI_Reports,API_Client,PDF_Local feNode;
+    class API_Router,Auth,Analyzer,Priority,Router,Similarity,DB_Pool beNode;
+    class PG_DB,T_Comp,T_Hist dbNode;
+```
+
+> 📄 For in-depth technical specifications, component descriptions, and query lifecycles, refer to [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+---
+
+## 🔄 Complaint Processing Workflow
+
+The diagram below details the sequence of operations executed from the moment a user files a complaint through resolution and final archiving:
+
+```mermaid
+flowchart TD
+    Start([User Submits Complaint Form]) --> ValCheck{Input Validation<br/>Email & Fields OK?}
+    
+    ValCheck -- No --> ShowErr[Display Form Validation Error]
+    ValCheck -- Yes --> CallAPI[POST /complaints Payload to FastAPI]
+
+    CallAPI --> TriageNode[1. Complaint Analyzer<br/>Taxonomy Keyword & Subcategory Matching]
+    TriageNode --> PrioNode[2. Priority Engine<br/>Scan Hazard Signals -> Assign Score & SLA]
+    PrioNode --> RouteNode[3. Department Router<br/>Determine Maintenance Division & Support Contact]
+    
+    RouteNode --> FetchHistory[Fetch Existing Complaint Corpus from DB]
+    FetchHistory --> SimNode[4. Similarity Engine<br/>TF-IDF Vectorization & Cosine Similarity Evaluation]
+
+    SimNode --> IDGen[Generate Unique Reference ID: CP-XXXXXXXX]
+    IDGen --> DBInsert[Insert Record into PostgreSQL 'complaints'<br/>Insert Initial Entry into 'status_history']
+    
+    DBInsert --> Resp201[Return HTTP 201 Success Response]
+    Resp201 --> ShowConfirm[Display Interactive AI Triage Card to Citizen]
+
+    ShowConfirm --> CitizenTrack[Citizen Tracks Ticket via Reference ID or Email]
+    ShowConfirm --> AdminReview[Admin Inspects Grievance in Control Center]
+
+    AdminReview --> StatusUpdate{Admin Updates Status<br/>Pending -> Assigned -> In Progress -> Resolved}
+    StatusUpdate --> PutReq[PUT /complaints/:id/status<br/>Validated via Secret Admin Key]
+    PutReq --> LogHistory[Update 'complaints' Table<br/>Append Entry to 'status_history']
+
+    LogHistory --> AnalyticsSink[Plotly Hotspot Analytics Updated]
+    LogHistory --> PDFExport[Generate Official PDF Docket / Executive Summary]
+
+    classDef step fill:#FFFFFF,stroke:#0284C7,stroke-width:2px;
+    classDef decision fill:#FEF3C7,stroke:#D97706,stroke-width:2px;
+    classDef err fill:#FEE2E2,stroke:#DC2626,stroke-width:2px;
+    classDef finish fill:#DCFCE7,stroke:#16A34A,stroke-width:2px;
+
+    class Start,CallAPI,TriageNode,PrioNode,RouteNode,FetchHistory,SimNode,IDGen,DBInsert,Resp201,ShowConfirm,CitizenTrack,AdminReview,PutReq,LogHistory,AnalyticsSink,PDFExport step;
+    class ValCheck,StatusUpdate decision;
+    class ShowErr err;
 ```
 
 ---
 
-## 2. How Does CivicPulse AI Work?
+## 🛠️ Technology Stack
 
-The system processes a complaint through multiple stages.
+All dependencies and frameworks used in CivicPulse AI have been verified against `requirements.txt` and the codebase:
 
-### Step 1: Complaint Submission
-
-A user submits a complaint through the application.
-
-Example:
-
-```text
-There is a large amount of garbage near the main road
-and it has not been collected for several days.
-```
-
-The system receives the complaint text and begins processing it.
-
----
-
-### Step 2: Text Processing
-
-The complaint text is cleaned and normalized before analysis.
-
-Typical processing includes:
-
-* Converting text into a consistent format
-* Removing unnecessary characters
-* Normalizing text
-* Extracting useful keywords
-* Preparing text for classification and similarity analysis
-
-This improves consistency during further processing.
+| Component | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend Framework** | Streamlit (`>=1.35.0`) | Rapid development of interactive, stateful web interfaces and multi-view navigation. |
+| **Backend REST API** | FastAPI (`>=0.110.0`) | High-performance asynchronous REST API framework with automatic OpenAPI documentation. |
+| **ASGI Server** | Uvicorn (`>=0.29.0`) | Lightning-fast ASGI web server implementation for running FastAPI in production. |
+| **Primary Database** | PostgreSQL 16 | ACID-compliant relational persistence for grievances, foreign key relationships, and audit trails. |
+| **Database Cloud Host** | Neon | Serverless PostgreSQL cloud hosting featuring autoscaling and branchable databases. |
+| **Database Driver & Pool** | `psycopg` & `psycopg_pool` (`>=3.1.0`) | Native Python PostgreSQL driver offering binary parameter serialization and thread-safe connection pooling. |
+| **Data Processing** | Pandas (`>=2.2.0`) & NumPy (`>=1.26.0`) | Tabular data manipulation, aggregation, and vectorized numerical transformations. |
+| **NLP & Vector Similarity** | Scikit-Learn (`>=1.4.0`) | TF-IDF text vectorization (`TfidfVectorizer`) and pairwise cosine similarity calculation (`cosine_similarity`). |
+| **Data Visualization** | Plotly (`>=5.20.0`) | Dynamic, interactive charts for departmental distribution, category share, and problem hotspot intelligence. |
+| **Document Generation** | ReportLab (`>=4.1.0`) | Programmatic generation of vector-quality printable PDF complaint dockets and executive briefings. |
+| **Validation & Schemas** | Pydantic (`>=2.0`) & Email-Validator | Strict runtime request parsing, data normalization, and email format validation. |
+| **HTTP Client** | Requests (`>=2.31.0`) & HTTPX (`>=0.27.0`) | Resilient client-side HTTP communication, timeout handling, and test client requests. |
+| **Automated Testing** | Pytest (`>=8.0.0`) | Comprehensive unit, security, and integration test execution framework. |
+| **Version Control** | Git & GitHub | Distributed version control, codebase tracking, and collaborative portfolio hosting. |
+| **Frontend Cloud Host** | Streamlit Community Cloud | Continuous deployment hosting platform for the Streamlit web application. |
+| **Backend Cloud Host** | Render | Managed cloud hosting platform for the FastAPI backend service. |
 
 ---
 
-### Step 3: Complaint Category Detection
+## 📁 Repository Structure
 
-The system analyzes keywords and complaint content to determine the most relevant category.
-
-Possible categories include:
-
-* Water Supply
-* Roads
-* Waste Management
-* Electricity
-* Drainage
-* Street Lighting
-* Public Safety
-* Sanitation
-* Other Civic Issues
-
-For example:
-
-```text
-Complaint:
-Garbage has not been collected for three days.
-
-Detected Category:
-Waste Management
-```
-
----
-
-### Step 4: Priority Evaluation
-
-The system evaluates the complaint to determine its priority.
-
-Factors can include:
-
-* Severity
-* Urgency
-* Safety-related keywords
-* Public impact
-* Complaint content
-
-Example:
-
-```text
-Complaint:
-Open electrical wires are hanging near a school entrance.
-
-Priority:
-High
-```
-
-The priority engine helps identify complaints that may require faster attention.
-
----
-
-### Step 5: Department Routing
-
-After analyzing the complaint, CivicPulse AI determines the department that is most relevant to the issue.
-
-Example:
-
-```text
-Complaint:
-Street lights are not working in our area.
-
-Category:
-Street Lighting
-
-Department:
-Electrical Department
-```
-
-This reduces the need for manual department assignment.
-
----
-
-### Step 6: Similar Complaint Detection
-
-The system checks whether similar complaints already exist.
-
-This helps identify:
-
-* Duplicate complaints
-* Recurring problems
-* Multiple complaints about the same issue
-* Frequently reported locations
-
-The project uses text similarity techniques to compare complaint descriptions.
-
-A similarity score can help determine how closely two complaints are related.
-
----
-
-### Step 7: Complaint Tracking
-
-Each complaint can move through different statuses.
-
-Example:
-
-```text
-Pending
-   |
-   v
-Assigned
-   |
-   v
-In Progress
-   |
-   v
-Resolved
-   |
-   v
-Closed
-```
-
-The system maintains status history so that the progression of a complaint can be tracked.
-
----
-
-### Step 8: Analytics
-
-The analytics module provides information about complaint patterns.
-
-It can analyze:
-
-* Total complaints
-* Complaint categories
-* Complaint priorities
-* Department distribution
-* Location-based complaints
-* Complaint status
-* Recurring issues
-* Resolution information
-
-The analytics section helps users understand where and what types of civic problems are being reported.
-
----
-
-### Step 9: Report Generation
-
-CivicPulse AI includes report-generation functionality for complaint and analytics information.
-
-Reports can help summarize:
-
-* Complaint details
-* Category
-* Priority
-* Department
-* Status
-* Resolution information
-* Complaint trends
-
----
-
-# 3. Main Features
-
-## Complaint Management
-
-* Submit complaints
-* Store complaint information
-* Track complaint status
-* Maintain complaint history
-
-## AI-Assisted Complaint Analysis
-
-* Text processing
-* Keyword-based analysis
-* Category detection
-* Priority evaluation
-* Department routing
-
-## Similarity Analysis
-
-* Detect similar complaints
-* Identify possible duplicates
-* Compare complaint descriptions
-* Identify recurring complaint patterns
-
-## Status Management
-
-Supported complaint lifecycle:
-
-```text
-Pending
-Assigned
-In Progress
-Resolved
-Closed
-```
-
-Status history is maintained to provide an audit trail of complaint updates.
-
-## Analytics Dashboard
-
-The analytics module provides insights based on:
-
-* Category
-* Location
-* Department
-* Priority
-* Status
-
-## Report Generation
-
-The system provides report-generation functionality for complaint and analytics information.
-
-## Database Support
-
-The project contains:
-
-* SQLite database support for the Streamlit application
-* PostgreSQL database support for the FastAPI backend
-* PostgreSQL schema
-* SQLite-to-PostgreSQL migration utility
-
----
-
-# 4. System Architecture
-
-The project contains a Streamlit application and a FastAPI backend.
-
-```text
-                    +----------------------+
-                    |       User           |
-                    +----------+-----------+
-                               |
-                               v
-                    +----------------------+
-                    |  Streamlit Frontend  |
-                    |      app.py          |
-                    +----------+-----------+
-                               |
-             +-----------------+-----------------+
-             |                 |                 |
-             v                 v                 v
-      Submit Complaint     Tracker View    Analytics View
-             |                 |                 |
-             +-----------------+-----------------+
-                               |
-                               v
-                    +----------------------+
-                    |    Analysis Modules  |
-                    +----------------------+
-                    | Text Processing      |
-                    | Complaint Analyzer   |
-                    | Priority Engine      |
-                    | Department Router    |
-                    | Similarity Engine    |
-                    +----------+-----------+
-                               |
-                               v
-                    +----------------------+
-                    |      Database        |
-                    +----------------------+
-                    | SQLite              |
-                    | PostgreSQL Backend   |
-                    +----------------------+
-
-                    FastAPI Backend
-                          |
-                          v
-                  PostgreSQL Database
-```
-
----
-
-# 5. Technology Stack
-
-## Frontend
-
-* Python
-* Streamlit
-
-## Backend
-
-* Python
-* FastAPI
-* Uvicorn
-
-## Database
-
-* SQLite
-* PostgreSQL
-* Psycopg
-
-## AI and Data Processing
-
-* Scikit-learn
-* TF-IDF
-* Cosine Similarity
-* Rule-based text analysis
-
-## Document Processing
-
-* PyPDF2
-* python-docx
-
-## Testing
-
-* Pytest
-
-## Environment Management
-
-* python-dotenv
-
----
-
-# 6. Project Structure
+The following tree represents the verified file and directory organization of the CivicPulse AI repository:
 
 ```text
 CivicPulse-AI/
-|
-+-- app.py
-+-- README.md
-+-- requirements.txt
-+-- .gitignore
-|
-+-- backend/
-|   +-- database.py
-|   +-- main.py
-|
-+-- database/
-|   +-- database.py
-|   +-- migrate_sqlite_to_postgres.py
-|   +-- postgres_schema.sql
-|   +-- schema.py
-|   +-- __init__.py
-|
-+-- data/
-|   +-- sample_data.py
-|   +-- __init__.py
-|
-+-- modules/
-|   +-- complaint_analyzer.py
-|   +-- department_router.py
-|   +-- priority_engine.py
-|   +-- report_generator.py
-|   +-- similarity_engine.py
-|   +-- text_processing.py
-|   +-- __init__.py
-|
-+-- tests/
-|   +-- test_analyzer.py
-|   +-- test_database.py
-|   +-- test_e2e_integration.py
-|   +-- test_priority.py
-|   +-- test_similarity.py
-|   +-- __init__.py
-|
-+-- utils/
-|   +-- ui_components.py
-|   +-- validators.py
-|   +-- __init__.py
-|
-+-- views/
-    +-- admin_view.py
-    +-- analytics_view.py
-    +-- reports_view.py
-    +-- submit_view.py
-    +-- tracker_view.py
-    +-- __init__.py
+├── .streamlit/
+│   └── config.toml               # Streamlit theme customization and server configurations
+├── backend/
+│   ├── database.py               # PostgreSQL connection pooling, SSL enforcement, and schema init
+│   └── main.py                   # FastAPI REST API routes, models, authentication, and error handling
+├── database/
+│   ├── database.py               # SQLite database manager for local/offline testing
+│   ├── init_db.py                # Database initialization script
+│   ├── migrate_sqlite_to_postgres.py # Data migration utility from SQLite to PostgreSQL
+│   ├── postgres_schema.sql       # Production PostgreSQL DDL table definitions and B-tree indexes
+│   └── schema.py                 # SQL schema definitions for SQLite
+├── data/
+│   └── sample_data.py            # Representative institutional grievance seeds for testing
+├── docs/
+│   ├── ARCHITECTURE.md           # Deep-dive architecture specifications and technical workflows
+│   └── screenshots/
+│       └── README.md             # Capture guide and filename reference for application screenshots
+├── modules/
+│   ├── complaint_analyzer.py     # Rule-based category and subcategory taxonomy classifier
+│   ├── department_router.py      # Division routing logic and target SLA calculation
+│   ├── priority_engine.py        # Deterministic urgency scorer with explainable diagnostic signals
+│   ├── report_generator.py       # ReportLab PDF docket and executive briefing generator
+│   ├── similarity_engine.py      # Scikit-learn TF-IDF vectorization and cosine similarity matcher
+│   └── text_processing.py        # String sanitization, keyword extraction, and tokenization utilities
+├── tests/
+│   ├── test_admin_status_update.py # Status transition validation and edge cases
+│   ├── test_analyzer.py          # Category taxonomy classification tests
+│   ├── test_api_security.py      # Authentication, timing protection, and fail-closed security tests
+│   ├── test_database.py          # Database queries and index tests
+│   ├── test_database_init_and_cloud.py # Cloud connection pooling and auto-recovery tests
+│   ├── test_docket_pdf.py        # ReportLab single docket PDF generation tests
+│   ├── test_e2e_integration.py   # End-to-end complaint submission and tracking tests
+│   ├── test_priority.py          # Priority engine hazard detection tests
+│   ├── test_similarity.py        # TF-IDF similarity calculation and threshold tests
+│   └── test_summary_pdf.py       # Executive summary PDF report generation tests
+├── utils/
+│   ├── api_client.py             # Unified API client mediating Streamlit-FastAPI communication
+│   ├── ui_components.py          # Custom CSS design system, metric cards, steppers, and badges
+│   └── validators.py             # Form validation utilities for complaint submission
+├── .env.example                  # Safe configuration template containing placeholder variable names
+├── .gitignore                    # Git ignore file excluding virtual environments, caches, and secrets
+├── app.py                        # Streamlit application entry point and sidebar controller
+├── requirements.txt              # Production dependency specifications
+└── README.md                     # Comprehensive project documentation
 ```
 
 ---
 
-# 7. Important Modules
+## 💻 Installation and Local Setup
 
-## app.py
+Follow these step-by-step instructions to set up and run CivicPulse AI locally on **Windows PowerShell**.
 
-Main Streamlit entry point.
+### 1. Prerequisites
+- **Python:** Version `3.10` or higher installed ([Download Python](https://www.python.org/downloads/)).
+- **Git:** Installed and configured ([Download Git](https://git-scm.com/)).
+- **PostgreSQL Database:** Either a local PostgreSQL instance or a free cloud database from [Neon](https://neon.tech/).
 
-It connects the application views and provides the user interface.
-
----
-
-## modules/text_processing.py
-
-Responsible for preparing complaint text for further analysis.
-
----
-
-## modules/complaint_analyzer.py
-
-Analyzes complaint information and identifies relevant complaint categories and attributes.
-
----
-
-## modules/priority_engine.py
-
-Evaluates complaint information and determines an appropriate priority level.
-
----
-
-## modules/department_router.py
-
-Maps complaint categories and keywords to the relevant department.
-
----
-
-## modules/similarity_engine.py
-
-Uses text similarity techniques to compare complaints and identify potentially similar complaints.
-
----
-
-## modules/report_generator.py
-
-Generates reports from complaint and analytics information.
-
----
-
-## database/database.py
-
-Handles SQLite database operations used by the Streamlit application.
-
-It manages complaint records and status history.
-
----
-
-## backend/database.py
-
-Provides PostgreSQL database connectivity for the FastAPI backend.
-
-The database connection is configured through the `DATABASE_URL` environment variable.
-
----
-
-## backend/main.py
-
-Contains the FastAPI backend and API endpoints.
-
-The backend provides an API layer for interacting with complaint-related functionality.
-
----
-
-## database/postgres_schema.sql
-
-Contains the PostgreSQL database schema used by the backend.
-
----
-
-## database/migrate_sqlite_to_postgres.py
-
-Provides a migration utility for transferring complaint data from SQLite to PostgreSQL.
-
-This is intended as a migration/setup utility rather than something that needs to be executed every time the application starts.
-
----
-
-# 8. Database Architecture
-
-CivicPulse AI currently contains two database paths.
-
-### Streamlit Application
-
-The Streamlit application uses SQLite through:
-
-```text
-database/database.py
-```
-
-SQLite is convenient for local development and demonstration.
-
-### FastAPI Backend
-
-The FastAPI backend uses PostgreSQL through:
-
-```text
-backend/database.py
-```
-
-The PostgreSQL connection is configured using:
-
-```text
-DATABASE_URL
-```
-
-in the `.env` file.
-
-### Database Flow
-
-```text
-Streamlit Application
-        |
-        v
-database/database.py
-        |
-        v
-SQLite
-
-
-FastAPI Backend
-        |
-        v
-backend/database.py
-        |
-        v
-PostgreSQL
-```
-
-The project also contains a migration utility for moving data from SQLite to PostgreSQL.
-
----
-
-# 9. Environment Configuration
-
-Create a `.env` file in the project root.
-
-Example:
-
-```env
-DATABASE_URL=postgresql://username:password@localhost:5432/civicpulse
-```
-
-Do not commit the `.env` file to GitHub.
-
-The project `.gitignore` already excludes:
-
-```text
-.env
-```
-
----
-
-# 10. Installation
-
-## Step 1: Clone the Repository
-
-```bash
+### 2. Clone the Repository
+Open Windows PowerShell and clone the project:
+```powershell
 git clone https://github.com/sandhiyabalasubramani/CivicPulse-AI.git
-```
-
-Move into the project directory:
-
-```bash
 cd CivicPulse-AI
 ```
 
----
-
-## Step 2: Create a Virtual Environment
-
-Windows:
-
+### 3. Create and Activate a Virtual Environment
 ```powershell
+# Create virtual environment
 python -m venv venv
-```
 
-Activate it:
-
-```powershell
+# Activate virtual environment in PowerShell
 .\venv\Scripts\Activate.ps1
 ```
+> *If you encounter a PowerShell script execution error, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` and re-run the activation script.*
 
-If PowerShell blocks script execution, use:
-
+### 4. Install Dependencies
 ```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
-Then activate again:
-
-```powershell
-.\venv\Scripts\Activate.ps1
-```
-
----
-
-## Step 3: Install Dependencies
-
-```powershell
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
----
-
-# 11. Running the Streamlit Application
-
-Start the Streamlit application with:
-
+### 5. Configure Environment Variables
+Copy the template configuration file to `.env`:
 ```powershell
-streamlit run app.py
+Copy-Item .env.example .env
 ```
+Open `.env` in any text editor and supply your PostgreSQL connection string and a secret administrative key:
+```ini
+# PostgreSQL Connection URL (e.g. from Neon or local Postgres)
+DATABASE_URL=postgresql://postgres:your_password@localhost:5432/civicpulse
 
-Streamlit will provide a local URL, normally similar to:
+# Secret Administrator Key for Protected Operations
+ADMIN_API_KEY=your_secure_random_admin_api_key_here
 
-```text
-http://localhost:8501
+# FastAPI Backend URL used by Streamlit client
+API_URL=http://127.0.0.1:8000
 ```
+*(Never commit `.env` containing real credentials to version control).*
 
-Open the displayed URL in a browser.
-
----
-
-# 12. Running the FastAPI Backend
-
-Start the backend using:
-
-```powershell
-uvicorn backend.main:app --reload
-```
-
-The backend normally runs at:
-
-```text
-http://127.0.0.1:8000
-```
-
-FastAPI automatically provides interactive API documentation at:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
----
-
-# 13. PostgreSQL Setup
-
-If PostgreSQL is being used for the backend:
-
-1. Install PostgreSQL.
-2. Create a PostgreSQL database.
-3. Configure the `DATABASE_URL` in `.env`.
-4. Apply the schema from:
-
-```text
-database/postgres_schema.sql
-```
-
-5. Start the FastAPI backend.
-
-The exact PostgreSQL username, password, host, port, and database name depend on the local environment.
-
----
-
-# 14. SQLite to PostgreSQL Migration
-
-The project includes:
-
-```text
-database/migrate_sqlite_to_postgres.py
-```
-
-This utility can be used when existing SQLite complaint data needs to be transferred to PostgreSQL.
-
-The migration process can be represented as:
-
-```text
-Existing SQLite Database
-          |
-          v
-Migration Utility
-          |
-          v
-PostgreSQL Database
-```
-
-Migration should be performed only when PostgreSQL setup and the required environment variables are configured.
-
----
-
-# 15. Testing
-
-The project uses Pytest.
-
-Run all tests with:
-
-```powershell
-pytest -q
-```
-
-The test suite covers areas such as:
-
-* Complaint analysis
-* Database operations
-* End-to-end integration
-* Priority evaluation
-* Similarity analysis
-
-Example:
-
-```text
-tests/
-|
-+-- test_analyzer.py
-+-- test_database.py
-+-- test_e2e_integration.py
-+-- test_priority.py
-+-- test_similarity.py
-```
-
----
-
-# 16. Example Complaint Processing
-
-Consider the following complaint:
-
-```text
-There is an open drainage problem near the school
-and dirty water is flowing onto the road.
-```
-
-The system can process it approximately as follows:
-
-```text
-Complaint
-   |
-   v
-Text Processing
-   |
-   v
-Category Detection
-   |
-   +--> Drainage
-   |
-   v
-Priority Evaluation
-   |
-   +--> Based on severity and impact
-   |
-   v
-Department Routing
-   |
-   +--> Relevant civic department
-   |
-   v
-Similarity Check
-   |
-   +--> Compare with existing complaints
-   |
-   v
-Store and Track
-   |
-   v
-Analytics and Reports
-```
-
-The exact classification and priority depend on the rules and data available in the application.
-
----
-
-# 17. Complaint Status History
-
-CivicPulse AI maintains a status history for complaints.
-
-For example:
-
-```text
-Complaint Created
-       |
-       v
-Pending
-       |
-       v
-Assigned
-       |
-       v
-In Progress
-       |
-       v
-Resolved
-       |
-       v
-Closed
-```
-
-Each status transition can be recorded in the status history.
-
-This provides an audit trail and makes it possible to understand how a complaint progressed over time.
-
----
-
-# 18. Analytics
-
-The analytics module helps identify complaint patterns.
-
-Examples of useful analysis include:
-
-### Category Analysis
-
-```text
-Waste Management
-Roads
-Water Supply
-Drainage
-Electricity
-Street Lighting
-```
-
-This can help identify which categories receive more complaints.
-
-### Location Analysis
-
-Complaints can be analyzed based on location to identify areas where similar issues are repeatedly reported.
-
-### Department Analysis
-
-Complaint distribution can be analyzed across departments.
-
-### Priority Analysis
-
-The system can display the distribution of complaints according to priority.
-
-### Status Analysis
-
-The application can show how many complaints are:
-
-```text
-Pending
-Assigned
-In Progress
-Resolved
-Closed
-```
-
----
-
-# 19. Similarity Detection
-
-CivicPulse AI uses text similarity techniques to identify complaints that may describe similar problems.
-
-A common approach used in the project is:
-
-```text
-Complaint Text
-      |
-      v
-TF-IDF Representation
-      |
-      v
-Vector Representation
-      |
-      v
-Cosine Similarity
-      |
-      v
-Similarity Score
-```
-
-TF-IDF converts text into numerical representations.
-
-Cosine similarity compares the resulting vectors.
-
-A higher similarity score indicates that two complaint texts are more similar according to the selected text-processing approach.
-
-Similarity detection is useful for identifying potentially duplicate or recurring complaints.
-
----
-
-# 20. AI Approach
-
-The term "AI" in CivicPulse AI refers to a combination of automated text-processing and machine-learning-based techniques.
-
-The current project includes:
-
-* Rule-based keyword analysis
-* Text normalization
-* TF-IDF
-* Cosine similarity
-* Automated priority evaluation
-* Automated department routing
-
-The system is not presented as a large language model or generative AI system.
-
-This distinction is important for understanding the actual technical implementation.
-
----
-
-# 21. Key Design Principles
-
-The project focuses on:
-
-### Automation
-
-Reduce repetitive manual complaint-processing tasks.
-
-### Modularity
-
-Separate complaint analysis, priority evaluation, routing, similarity detection, database operations, reports, and UI into different modules.
-
-### Traceability
-
-Maintain complaint status history.
-
-### Data Analysis
-
-Provide analytics based on complaint information.
-
-### Extensibility
-
-Keep the architecture modular so additional AI models, APIs, dashboards, and database services can be added later.
-
----
-
-# 22. API
-
-The FastAPI backend provides an API layer for backend functionality.
-
-Interactive API documentation can be accessed through:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-When the backend is running, the Swagger interface can be used to inspect available endpoints and test supported API operations.
-
----
-
-# 23. Security and Configuration Notes
-
-Sensitive configuration should not be committed to GitHub.
-
-The following files are intentionally ignored:
-
-```text
-.env
-civicpulse.db
-*.sqlite3
-*.db-journal
-civicpulse_backup_before_postgresql.db
-```
-
-This prevents local database files and environment credentials from being unnecessarily included in the public repository.
-
----
-
-# 24. Current Limitations
-
-CivicPulse AI is an academic and portfolio project.
-
-The current implementation has several limitations:
-
-* Classification depends on the implemented rules and available data.
-* Priority evaluation is based on the project's configured logic.
-* Similarity results depend on the text-processing approach and available complaint data.
-* The Streamlit application and FastAPI backend currently use separate database paths.
-* PostgreSQL integration is provided through the backend.
-* The project does not currently depend on an external large language model API.
-* Production-scale authentication and authorization are not the main focus of the current version.
-* Large-scale deployment would require additional infrastructure and security configuration.
-
-These limitations can be addressed in future versions.
-
----
-
-# 25. Future Enhancements
-
-Possible future improvements include:
-
-* Large language model integration
-* Multilingual complaint processing
-* Voice-based complaint submission
-* Mobile application
-* Real-time notifications
-* Email and SMS alerts
-* Advanced duplicate detection
-* Geospatial complaint visualization
-* Role-based authentication
-* Public complaint dashboards
-* Cloud deployment
-* Containerization using Docker
-* Production PostgreSQL deployment
-* Advanced predictive analytics
-* Automated response generation
-
----
-
-# 26. Why This Project?
-
-CivicPulse AI demonstrates how software development and AI-assisted techniques can be combined to solve a practical civic problem.
-
-The project covers multiple areas of software engineering:
-
-```text
-Frontend Development
-        +
-Backend Development
-        +
-Database Management
-        +
-Text Processing
-        +
-Machine Learning
-        +
-Analytics
-        +
-Testing
-        +
-Report Generation
-```
-
-It also demonstrates the importance of designing a system as multiple connected modules rather than implementing everything inside a single program.
-
----
-
-# 27. Skills Demonstrated
-
-This project demonstrates practical experience with:
-
-* Python
-* Streamlit
-* FastAPI
-* Uvicorn
-* SQLite
-* PostgreSQL
-* Psycopg
-* Scikit-learn
-* TF-IDF
-* Cosine Similarity
-* Text Processing
-* REST API Development
-* Database Design
-* Data Analytics
-* Automated Testing
-* Git and GitHub
-* Modular Software Architecture
-
----
-
-# 28. How the Complete System Fits Together
-
-The complete conceptual workflow is:
-
-```text
-                    CIVIC COMPLAINT
-                           |
-                           v
-                  +----------------+
-                  | Text Processing |
-                  +-------+--------+
-                          |
-                          v
-                +--------------------+
-                | Complaint Analysis |
-                +---------+----------+
-                          |
-             +------------+------------+
-             |            |            |
-             v            v            v
-         Category      Priority     Department
-         Detection     Evaluation    Routing
-             |            |            |
-             +------------+------------+
-                          |
-                          v
-                +--------------------+
-                | Similarity Engine  |
-                +---------+----------+
-                          |
-                          v
-                +--------------------+
-                | Database Storage   |
-                +---------+----------+
-                          |
-                          v
-                +--------------------+
-                | Status Tracking    |
-                +---------+----------+
-                          |
-                          v
-                +--------------------+
-                | Analytics          |
-                +---------+----------+
-                          |
-                          v
-                +--------------------+
-                | Report Generation  |
-                +--------------------+
-```
-
-This workflow represents the overall architecture of CivicPulse AI.
-
----
-
-# 29. Getting Started Quickly
-
-For a basic local demonstration:
-
-```powershell
-git clone https://github.com/sandhiyabalasubramani/CivicPulse-AI.git
-
-cd CivicPulse-AI
-
-python -m venv venv
-
-.\venv\Scripts\Activate.ps1
-
-pip install -r requirements.txt
-
-# Copy environment template and configure DATABASE_URL and ADMIN_API_KEY
-copy .env.example .env
-
-# Run automated test suite
-pytest tests/ -v
-
-# Run the Streamlit frontend
-streamlit run app.py
-```
-
-Then open the local Streamlit URL displayed in the terminal.
-
-For backend development:
-
+### 6. Start the FastAPI Backend
+In your active terminal, run:
 ```powershell
 uvicorn backend.main:app --reload --port 8000
 ```
+- The backend will automatically verify and initialize database tables (`complaints` and `status_history`).
+- Access the FastAPI root: `http://127.0.0.1:8000`
+- Access Interactive Swagger API Docs: `http://127.0.0.1:8000/docs`
 
-Then open the interactive Swagger API documentation:
-
-```text
-http://127.0.0.1:8000/docs
+### 7. Start the Streamlit Frontend
+Open a **second PowerShell window**, navigate to the project directory, activate the virtual environment, and launch the frontend:
+```powershell
+cd "C:\Users\sandhiya B\OneDrive\Desktop\CivicPulse-AI"
+.\venv\Scripts\Activate.ps1
+streamlit run app.py
 ```
+- Streamlit will open the application automatically at `http://localhost:8501`.
 
 ---
 
-# 30. Repository
+## 📡 API Documentation
 
-GitHub Repository:
+The FastAPI backend exposes RESTful endpoints supporting JSON serialization, automatic schema generation, and constant-time authentication.
 
-```text
-https://github.com/sandhiyabalasubramani/CivicPulse-AI
-```
+Interactive Swagger documentation is available at `http://127.0.0.1:8000/docs` or the live cloud endpoint:  
+🔗 **[https://civicpulse-ai-api-5g8h.onrender.com/docs](https://civicpulse-ai-api-5g8h.onrender.com/docs)**
 
----
+### Key Implemented Endpoints
 
-# 31. Author
-
-**Sandhiya B**
-
-B.E. Electrical and Electronics Engineering Student
-
-Interested in:
-
-* Python Development
-* AI
-* IoT
-* Embedded Systems
-* Software Development
-* Data Processing
+| Method | Endpoint Path | Description | Required Inputs |
+| :---: | :--- | :--- | :--- |
+| `GET` | `/health` | Diagnostic probe reporting API operational status, database connectivity, and record counts. | None |
+| `POST` | `/complaints` | Ingests a new complaint, runs AI categorization, priority evaluation, department routing, TF-IDF similarity, and stores the ticket in PostgreSQL. | **Body (JSON):** `name`, `email`, `location`, `title`, `description`, `category` *(opt)*, `department` *(opt)* |
+| `GET` | `/complaints` | Fetches filtered complaints for admin management, analytics, and reports. Supports pagination. | **Query Params:** `category`, `priority`, `status`, `location`, `department`, `email`, `search_query`, `limit`, `offset` |
+| `GET` | `/complaints/{complaint_id}` | Retrieves full record details and chronological status history for a specific reference ID. | **Path Param:** `complaint_id` (e.g. `CP-XXXXXXXX`) |
+| `PUT` | `/complaints/{complaint_id}/status` | **Admin Protected:** Updates complaint status, priority, notes, and records an immutable audit log entry. | **Headers:** `X-Admin-Key` or `Authorization: Bearer <key>`<br/>**Body (JSON):** `new_status`, `changed_by`, `comment`, `admin_notes` |
+| `GET` | `/complaints/by-email/{email}` | Searches and returns all complaint records associated with a citizen's email address. | **Path Param:** `email` |
+| `GET` | `/complaints/kpis` | Returns aggregated metrics (total, pending, in progress, resolved, high priority, resolution rate, average resolution hours). | None |
+| `GET` | `/complaints/distinct/{column}` | Returns unique non-empty values for filtering dropdowns (`category`, `priority`, `status`, `location`, `department`). | **Path Param:** `column` |
+| `GET` | `/status-history` | Retrieves complete chronological status change audit entries across all complaints. | **Query Params:** `limit` *(default: 5000)* |
+| `POST` | `/analyze` | Dry-run endpoint that evaluates category, priority, and department routing without persisting to the database. | **Body (JSON):** `title`, `description`, `category` *(opt)*, `department` *(opt)* |
+| `GET` | `/complaints/count` | Returns total complaint and status history record counts with self-healing schema creation. | None |
 
 ---
 
-# 32. Project Summary
+## 🗄️ Database Overview
 
-CivicPulse AI is an intelligent complaint management and resolution analytics platform that demonstrates how civic complaints can be processed through an automated software pipeline.
+CivicPulse AI utilizes a normalized PostgreSQL relational database schema.
 
-The system combines:
+### 1. `complaints` Table
+Stores primary incident records, complainant identification, triage attributes, and resolution timestamps:
+- `id`: Auto-incrementing integer primary key (`SERIAL PRIMARY KEY`).
+- `complaint_id`: Unique institutional reference string (e.g. `CP-3C418E94`). Indexed for $O(1)$ lookups.
+- `name`, `email`, `location`: Complainant contact and physical campus location coordinates.
+- `title`, `description`: Grievance subject and full problem description.
+- `category`, `subcategory`: Classified issue domain.
+- `priority`, `priority_reason`: Severity level (`Critical`, `High`, `Medium`, `Low`) and diagnostic explanation.
+- `department`: Allocated maintenance division.
+- `status`: Current lifecycle phase (`Pending`, `Assigned`, `In Progress`, `Resolved`, `Closed`).
+- `admin_notes`: Optional administrative remarks.
+- `similar_count`, `top_similar_id`, `top_similarity_score`: TF-IDF vector similarity metrics.
+- `created_at`, `updated_at`, `resolved_at`: ISO-8601 timestamps tracking resolution durations.
 
-```text
-Complaint Submission
-        +
-Text Processing
-        +
-Category Detection
-        +
-Priority Evaluation
-        +
-Department Routing
-        +
-Similarity Detection
-        +
-Status Tracking
-        +
-Database Management
-        +
-Analytics
-        +
-Report Generation
+### 2. `status_history` Table
+Provides an audit log tracking state transitions:
+- `id`: Auto-incrementing primary key.
+- `complaint_id`: Foreign ticket reference string. Indexed for efficient history retrieval.
+- `old_status`, `new_status`: Pre- and post-transition state values.
+- `changed_by`: Responsible actor (e.g. `"System"`, `"Admin"`, or officer name).
+- `comment`: Reason or operational remarks accompanying the state change.
+- `changed_at`: Timestamp recording the exact moment of transition.
+
+---
+
+## 🔒 Security
+
+CivicPulse AI implements defense-in-depth security practices:
+
+### Implemented Security Measures
+- **Environment Separation:** All database credentials, URLs, and administrator keys are loaded strictly from environment variables or deployment secrets (`.env` is excluded in `.gitignore`).
+- **Fail-Closed Administrative Authentication:** Endpoints modifying grievance states require authentication via `X-Admin-Key` or `Bearer` tokens. If `ADMIN_API_KEY` is unconfigured, the backend safely defaults to rejecting requests with HTTP 500 rather than opening access.
+- **Constant-Time Verification:** Administrative key strings are evaluated using Python's `hmac.compare_digest` to prevent timing analysis attacks.
+- **SQL Injection Immunization:** All database operations utilize parameterized queries with native `%s` placeholders via `psycopg3`. No dynamic string interpolation is performed.
+- **Pydantic Data Validation:** Incoming payloads are parsed through strict Pydantic v2 schemas, trimming whitespace, lowercasing emails, and enforcing status whitelists.
+- **Exception Sanitization:** Global exception handlers catch unexpected runtime errors and return generic error responses, preventing database internal connection strings or stack traces from reaching clients.
+- **Encrypted Transport:** Cloud PostgreSQL connections enforce `sslmode=require`, ensuring end-to-end encrypted database traffic.
+
+### Recommended Future Enhancements
+- Implementation of JSON Web Tokens (JWT) or OAuth2 with institutional Single Sign-On (SSO).
+- Granular Role-Based Access Control (RBAC) separating field technicians, supervisors, and executive viewers.
+- Automated API rate-limiting via Redis to mitigate denial-of-service abuse.
+
+---
+
+## 🧪 Testing and Validation
+
+The repository contains an automated test suite implemented in `pytest`. All **99 tests** have been executed and verified in the local environment:
+
+```powershell
+pytest
 ```
 
-The project provides a modular foundation that can be extended toward a larger civic technology platform in the future.
+### Verified Test Results
+```text
+============================= test session starts =============================
+platform win32 -- Python 3.13.1, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\sandhiya B\OneDrive\Desktop\CivicPulse-AI
+collected 99 items
+
+tests/test_admin_status_update.py ..........................             [ 26%]
+tests/test_analyzer.py ......                                            [ 32%]
+tests/test_api_security.py ....................                          [ 52%]
+tests/test_database.py ...                                               [ 55%]
+tests/test_database_init_and_cloud.py ................                   [ 71%]
+tests/test_docket_pdf.py .......                                         [ 78%]
+tests/test_e2e_integration.py .                                          [ 79%]
+tests/test_hero_banner.py ........                                       [ 87%]
+tests/test_priority.py ....                                              [ 91%]
+tests/test_similarity.py ..                                              [ 93%]
+tests/test_summary_pdf.py ......                                         [100%]
+
+======================== 99 passed, 1 warning in 6.66s ========================
+```
+
+### Test Coverage Highlights
+- **`test_api_security.py` (20 tests):** Verifies timing-attack resistant key comparison, missing key rejection, malformed headers, and fail-closed behaviors.
+- **`test_admin_status_update.py` (26 tests):** Validates status transitions, invalid status handling, timestamp recording, audit trail inserts, and view rendering.
+- **`test_analyzer.py` & `test_priority.py` (10 tests):** Tests keyword taxonomy classification accuracy, hazard signal detection, and priority scoring.
+- **`test_similarity.py` (2 tests):** Verifies TF-IDF cosine similarity calculations, threshold triggers, and empty corpus handling.
+- **`test_docket_pdf.py` & `test_summary_pdf.py` (13 tests):** Validates ReportLab PDF stream generation, layout bounds, and table flowables.
+- **`test_database_init_and_cloud.py` & `test_database.py` (19 tests):** Confirms schema idempotency, connection recovery, and index creation.
+- **`test_hero_banner.py` (8 tests):** Confirms platform image asset existence, format validity, dimension ratio, base64 data encoding, absolute filesystem path resolution, image source decoding, Starlette static file route resolution, and graceful missing-file fallback.
+- **`test_e2e_integration.py` (1 test):** Exercises the complete intake, analysis, persistence, and retrieval round-trip.
+
+---
+
+## 🚀 Limitations and Future Enhancements
+
+The following roadmap items represent architectural improvements planned for future releases:
+
+1. **Automated Notification Dispatch (Email / SMS / WhatsApp):** Integrate Twilio or SendGrid APIs to dispatch instant status notifications when a ticket advances through stages.
+2. **Granular Role-Based Access Control (RBAC):** Introduce distinct role profiles (Complainant, Maintenance Technician, Department Head, Super Admin) with scoped permissions.
+3. **Automated SLA Escalation Engine:** Implement automated cron jobs that flag unresolved grievances approaching SLA breaches and trigger supervisor alerts.
+4. **Interactive Campus GIS Mapping:** Integrate Leaflet/Folium geospatial maps to visualize problem hotspots geographically across campus facility blueprints.
+5. **Multi-Lingual NLP & Image OCR:** Support regional language input translation and optical character recognition (OCR) for attached maintenance photographs.
+6. **Continuous Integration & Deployment (CI/CD):** Add GitHub Actions workflows to automatically run the 99-test validation suite on every pull request.
+
+---
+
+## 👩‍💻 Author
+
+**Sandhiya B**  
+*B.E. Electrical and Electronics Engineering Student*  
+GitHub: [@sandhiyabalasubramani](https://github.com/sandhiyabalasubramani)  
+
+---
+
+<div align="center">
+
+*CivicPulse AI was engineered to demonstrate modern full-stack system design, deterministic natural language processing, relational data modeling, and enterprise documentation standards.*
+
+⭐ **If you find this project informative or useful, please consider giving it a star on GitHub!**
+
+</div>

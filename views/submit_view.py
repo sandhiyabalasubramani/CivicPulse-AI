@@ -6,6 +6,7 @@ import streamlit as st
 from utils.validators import validate_complaint_form
 from utils.api_client import api_client, API_URL
 from utils.ui_components import (
+    render_hero_banner,
     render_header,
     get_status_badge_html,
     get_priority_badge_html,
@@ -14,6 +15,7 @@ from utils.ui_components import (
 
 
 def render_submit_view():
+    render_hero_banner()
     render_header(
         title="Submit Institutional Grievance",
         subtitle="Log a complaint and let CivicPulse AI analyze, categorize, prioritize, and route it automatically.",

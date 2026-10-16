@@ -8,6 +8,8 @@ from .ui_components import (
     get_status_badge_html,
     get_priority_badge_html,
     render_metric_card,
+    get_hero_banner_path,
+    render_hero_banner,
     render_header,
     render_timeline
 )
@@ -20,6 +22,8 @@ __all__ = [
     "get_status_badge_html",
     "get_priority_badge_html",
     "render_metric_card",
+    "get_hero_banner_path",
+    "render_hero_banner",
     "render_header",
     "render_timeline",
     "api_client",
