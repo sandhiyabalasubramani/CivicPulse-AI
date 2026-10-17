@@ -370,3 +370,48 @@ def test_all_five_streamlit_views_render_without_exception():
 
         # 5. Reports View
         render_reports_view()
+
+
+def test_get_complaint_case_insensitive_and_whitespace_endpoint(client):
+    """
+    Verifies that GET /complaints/{complaint_id} handles leading/trailing whitespace
+    and case-insensitivity gracefully without throwing 404.
+    """
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+    mock_row = (
+        1, "CP-2026-0001", "User", "user@test.edu", "Room 101", "AC leak",
+        "Water leaking", "Electrical", "HVAC", "High", "Leak", "Maintenance",
+        "Pending", "", 0, "", 0.0, "2026-10-12 10:00:00", "2026-10-12 10:00:00", None
+    )
+    mock_cursor.fetchone.return_value = mock_row
+    mock_cursor.fetchall.return_value = [("None", "Pending", "System", "Logged", "2026-10-12 10:00:00")]
+
+    with patch("backend.main.get_connection", return_value=mock_conn):
+        resp = client.get("/complaints/  cp-2026-0001  ")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["complaint"]["complaint_id"] == "CP-2026-0001"
+        assert len(data["history"]) == 1
+
+
+def test_update_status_case_insensitive_endpoint(client, isolated_admin_key):
+    """
+    Verifies that PUT /complaints/{complaint_id}/status accepts lowercase ticket IDs
+    and matches them case-insensitively.
+    """
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    mock_cursor.fetchone.return_value = ("Pending", None)
+
+    with patch("backend.main.get_connection", return_value=mock_conn):
+        resp = client.put(
+            "/complaints/cp-2026-0001/status",
+            json={"new_status": "Resolved", "changed_by": "Admin"},
+            headers={"X-Admin-Key": isolated_admin_key}
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "success"

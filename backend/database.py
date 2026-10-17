@@ -89,6 +89,12 @@ class ManagedConnection:
             self._closed = True
             if self._pool is not None:
                 try:
+                    if hasattr(self._conn, "info") and hasattr(psycopg, "pq"):
+                        if self._conn.info.transaction_status == psycopg.pq.TransactionStatus.INTRANS:
+                            try:
+                                self._conn.rollback()
+                            except Exception:
+                                pass
                     self._pool.putconn(self._conn)
                     return
                 except Exception:

@@ -6,64 +6,71 @@ This document outlines the software architecture, component relationships, data 
 
 ## 1. High-Level System Architecture
 
-CivicPulse AI is structured as a decoupled multi-tier web application consisting of a modern **Streamlit frontend client**, an asynchronous **FastAPI REST backend**, a managed cloud **PostgreSQL database (Neon)**, and local **ReportLab document generation engines**.
+CivicPulse AI is structured as a decoupled multi-tier web application consisting of a modern **Streamlit frontend client**, an asynchronous **FastAPI REST backend**, an intelligent **deterministic NLP and vector similarity pipeline**, a managed **PostgreSQL database (Neon)**, and on-demand **ReportLab PDF generation and CSV export engines**.
 
 ```mermaid
-flowchart TB
-    subgraph ClientLayer["Frontend Client Tier (Streamlit)"]
-        UI["Streamlit Application<br/><code>app.py</code>"]
-        V_Submit["Submit View<br/><code>views/submit_view.py</code>"]
-        V_Track["Tracker View<br/><code>views/tracker_view.py</code>"]
-        V_Admin["Admin Dashboard<br/><code>views/admin_view.py</code>"]
-        V_Analytics["Analytics & Hotspots<br/><code>views/analytics_view.py</code>"]
-        V_Reports["Reports & PDF Export<br/><code>views/reports_view.py</code>"]
-        ApiClient["Unified API Client<br/><code>utils/api_client.py</code>"]
-        PdfGen["Local PDF Generator<br/><code>modules/report_generator.py</code>"]
+flowchart TD
+    subgraph UI["🖥️ Streamlit Frontend UI"]
+        direction TB
+        V_Submit["📝 Grievance Submission Portal<br/><code>views/submit_view.py</code>"]
+        V_Track["🔍 Live Complaint Tracker<br/><code>views/tracker_view.py</code>"]
+        V_Admin["🛡️ Admin Operations Control Center<br/><code>views/admin_view.py</code>"]
+        V_Analytics["📊 Analytics & Hotspots Dashboard<br/><code>views/analytics_view.py</code>"]
+        V_Reports["📑 Governance Reports View<br/><code>views/reports_view.py</code>"]
+        API_Client["Unified API Client<br/><code>utils/api_client.py</code>"]
 
-        UI --> V_Submit
-        UI --> V_Track
-        UI --> V_Admin
-        UI --> V_Analytics
-        UI --> V_Reports
-        V_Submit --> ApiClient
-        V_Track --> ApiClient
-        V_Admin --> ApiClient
-        V_Analytics --> ApiClient
-        V_Reports --> ApiClient
-        V_Reports --> PdfGen
-        V_Track --> PdfGen
+        V_Submit --> API_Client
+        V_Track --> API_Client
+        V_Admin --> API_Client
+        V_Analytics --> API_Client
+        V_Reports --> API_Client
     end
 
-    subgraph ApiLayer["Application Backend Tier (FastAPI)"]
-        API["FastAPI REST Server<br/><code>backend/main.py</code>"]
-        AuthMiddleware["Admin Auth Guard<br/>Constant-time HMAC"]
-        
-        subgraph EngineLayer["Intelligence & Routing Engines"]
-            Analyzer["Complaint Analyzer<br/>Taxonomy Keyword Matcher"]
-            PriorityEng["Priority Engine<br/>Deterministic Signal Scorer"]
-            DeptRouter["Department Router<br/>SLA & Division Allocator"]
-            SimEngine["Similarity Engine<br/>TF-IDF & Cosine Similarity"]
-        end
-
-        DBPool["PostgreSQL Connection Pool<br/><code>backend/database.py</code>"]
+    subgraph Exports["📤 PDF Reports & CSV Export"]
+        direction TB
+        PDF_Docket["📄 Single Complaint Docket PDF<br/>(ReportLab Vector Document)"]
+        PDF_Summary["📊 Executive Summary Analytics PDF<br/>(ReportLab Governance Briefing)"]
+        CSV_Export["📥 Tabular Grievance Records<br/>(Raw CSV Data Export)"]
     end
 
-    subgraph DataLayer["Persistence Tier (PostgreSQL)"]
-        DB[(Cloud PostgreSQL<br/>Neon / Managed Instance)]
-        T_Complaints[("Table: complaints")]
-        T_History[("Table: status_history")]
-        DB --> T_Complaints
-        DB --> T_History
+    subgraph API["⚡ FastAPI REST Backend Server"]
+        direction TB
+        FastAPI_App["FastAPI Application Server<br/><code>backend/main.py</code><br/>(/complaints, /health, /docs)"]
+        Admin_Auth["Admin Auth Guard<br/>Constant-Time HMAC (X-Admin-Key)"]
+        FastAPI_App --- Admin_Auth
     end
 
-    ApiClient -- "HTTPS / JSON REST Calls" --> API
-    API --> AuthMiddleware
-    API --> Analyzer
-    API --> PriorityEng
-    API --> DeptRouter
-    API --> SimEngine
-    API --> DBPool
-    DBPool -- "psycopg3 (SSL Mode Require)" --> DB
+    subgraph AI["🤖 AI Triage & Analytics Pipeline"]
+        direction TB
+        AI_Triage["1. AI Triage & Classification<br/><code>modules/complaint_analyzer.py</code><br/>(Domain Taxonomy Matching)"]
+        Priority_Eng["2. Explainable Priority Engine<br/><code>modules/priority_engine.py</code><br/>(Urgency & Safety Hazard Scoring)"]
+        Dept_Router["3. Department Router<br/><code>modules/department_router.py</code><br/>(Division Allocation & Target SLA)"]
+        Duplicate_Detect["4. Duplicate Detection Engine<br/><code>modules/similarity_engine.py</code><br/>(TF-IDF & Cosine Similarity)"]
+
+        AI_Triage --> Priority_Eng
+        Priority_Eng --> Dept_Router
+        Dept_Router --> Duplicate_Detect
+    end
+
+    subgraph DB["🗄️ PostgreSQL Persistence Tier"]
+        direction TB
+        DB_Pool["Connection Pool (psycopg3)<br/><code>backend/database.py</code>"]
+        T_Complaints[("Table: complaints<br/>(Grievances, Priority, SLAs, Meta)")]
+        T_History[("Table: status_history<br/>(Immutable Chronological Audit Log)")]
+        DB_Pool --> T_Complaints
+        DB_Pool --> T_History
+    end
+
+    %% Main End-to-End Pipeline
+    API_Client -- "HTTP REST (JSON Payloads)" --> FastAPI_App
+    FastAPI_App -- "Intake & Triage" --> AI_Triage
+    Duplicate_Detect -- "Persist Ticket & Similarity" --> DB_Pool
+    FastAPI_App -- "Queries & Status Updates" --> DB_Pool
+
+    %% Export Generation
+    V_Track -. "Generate Docket" .-> PDF_Docket
+    V_Reports -. "Generate Executive Briefing" .-> PDF_Summary
+    V_Reports -. "Download Filtered Dataset" .-> CSV_Export
 ```
 
 ---
@@ -138,7 +145,7 @@ sequenceDiagram
     Complainant->>Streamlit: Enters complaint details (title, description, location)
     Streamlit->>Streamlit: Validates inputs (name, email format, minimum length)
     Streamlit->>API: POST /complaints (JSON payload)
-    
+
     %% 2. Processing
     API->>NLP: Analyze text (ComplaintAnalyzer)
     NLP-->>API: Returns detected Category & Subcategory
@@ -150,7 +157,7 @@ sequenceDiagram
     DB-->>API: Historical records
     API->>NLP: Calculate TF-IDF & Cosine Similarity (SimilarityEngine)
     NLP-->>API: Returns Top Similar Matches & Similarity Score
-    
+
     %% 3. Persistence
     API->>DB: INSERT into complaints (assigned CP-XXXXXXXX ID)
     API->>DB: INSERT into status_history (status: Pending, author: System)

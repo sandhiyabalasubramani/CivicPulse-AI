@@ -724,7 +724,7 @@ def update_complaint_status(
 
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT status, resolved_at FROM complaints WHERE complaint_id = %s",
+                "SELECT status, resolved_at FROM complaints WHERE UPPER(complaint_id) = UPPER(%s)",
                 (cid,)
             )
             row = cur.fetchone()
@@ -761,7 +761,7 @@ def update_complaint_status(
                 update_query += ", department = %s"
                 update_params.append(request.department)
 
-            update_query += " WHERE complaint_id = %s"
+            update_query += " WHERE UPPER(complaint_id) = UPPER(%s)"
             update_params.append(cid)
 
             cur.execute(update_query, tuple(update_params))
@@ -775,7 +775,7 @@ def update_complaint_status(
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """,
                 (
-                    cid,
+                    cid.upper() if cid.upper().startswith("CP-") else cid,
                     old_status,
                     request.new_status,
                     request.changed_by or "Admin",
@@ -867,6 +867,13 @@ def get_all_status_history(limit: Optional[int] = 5000):
 
 @app.get("/complaints/{complaint_id}")
 def get_complaint(complaint_id: str):
+    cid = complaint_id.strip() if complaint_id else ""
+    if not cid:
+        raise HTTPException(
+            status_code=400,
+            detail="Complaint ID cannot be empty."
+        )
+
     conn = None
     try:
         conn = get_connection()
@@ -896,9 +903,9 @@ def get_complaint(complaint_id: str):
                     updated_at,
                     resolved_at
                 FROM complaints
-                WHERE complaint_id = %s
+                WHERE UPPER(complaint_id) = UPPER(%s)
                 """,
-                (complaint_id,)
+                (cid,)
             )
 
             row = cur.fetchone()
@@ -906,12 +913,14 @@ def get_complaint(complaint_id: str):
             if not row:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Complaint '{complaint_id}' not found"
+                    detail=f"Complaint '{cid}' not found"
                 )
+
+            canonical_cid = str(row[1])
 
             complaint = {
                 "id": row[0],
-                "complaint_id": row[1],
+                "complaint_id": canonical_cid,
                 "name": row[2],
                 "email": row[3],
                 "location": row[4],
@@ -941,10 +950,10 @@ def get_complaint(complaint_id: str):
                     comment,
                     changed_at
                 FROM status_history
-                WHERE complaint_id = %s
-                ORDER BY changed_at ASC
+                WHERE UPPER(complaint_id) = UPPER(%s)
+                ORDER BY changed_at ASC, id ASC
                 """,
-                (complaint_id,)
+                (canonical_cid,)
             )
 
             history_rows = cur.fetchall()

@@ -14,7 +14,7 @@ An enterprise-grade grievance management, automated triage, and operational inte
 [![Plotly](https://img.shields.io/badge/Plotly-Interactive_Analytics-3F4F75?style=for-the-badge&logo=plotly&logoColor=white)](https://plotly.com/)
 [![ReportLab](https://img.shields.io/badge/ReportLab-PDF_Generation-D12420?style=for-the-badge)](https://www.reportlab.com/)
 [![Render](https://img.shields.io/badge/Render-Backend_Hosting-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/)
-[![Tests](https://img.shields.io/badge/Tests-99%20Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-101%20Passed-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](tests/)
 
 <br/>
 
@@ -37,7 +37,7 @@ Institutional facility management across universities, colleges, and municipal o
 - Maintains an immutable, chronological status audit log throughout the resolution lifecycle.
 - Empowers executives with interactive Plotly analytics to identify systemic failure hotspots and generate downloadable PDF reports.
 
-> **Technical Clarification on AI Capabilities:**  
+> **Technical Clarification on AI Capabilities:**
 > CivicPulse AI employs **deterministic rule-based triage** (domain taxonomy keyword graphs and priority signal matching) combined with **scikit-learn TF-IDF vector embeddings and cosine similarity analysis** for duplicate discovery. The platform deliberately does not rely on opaque deep learning models or generative AI hallucinations, ensuring that institutional priority assignments and department routings remain 100% explainable, deterministic, and auditable.
 
 ---
@@ -53,7 +53,7 @@ The platform is deployed and fully accessible online:
 | **Interactive API Documentation** | [civicpulse-ai-api-5g8h.onrender.com/docs](https://civicpulse-ai-api-5g8h.onrender.com/docs) | Swagger UI / OpenAPI 3.0 |
 | **Source Code Repository** | [github.com/sandhiyabalasubramani/CivicPulse-AI](https://github.com/sandhiyabalasubramani/CivicPulse-AI) | GitHub |
 
-> ⏳ **Note on Cloud Service Wake-Up:**  
+> ⏳ **Note on Cloud Service Wake-Up:**
 > The FastAPI backend service is hosted on Render's free tier. If the service has been inactive, the server automatically spins down to conserve resources and may require 30 to 60 seconds to wake up upon receiving the first web request.
 
 ---
@@ -100,88 +100,78 @@ CivicPulse AI features a clean, responsive interface powered by modern glassmorp
 | **📊 Analytics & Hotspots** | Plotly telemetry dashboard displaying category distribution, department workload allocation, resolution timelines, and recurring hotspot analytics. |
 | **📑 Reports & PDF Export** | Document export center generating printable individual complaint dockets (`.pdf`), executive briefing summaries (`.pdf`), and raw CSV records. |
 
-> 📷 **Screenshot Capture Guidelines:**  
+> 📷 **Screenshot Capture Guidelines:**
 > For instructions on capturing and contributing UI screenshots from the live deployment or local environment, refer to [`docs/screenshots/README.md`](docs/screenshots/README.md).
 
 ---
 
 ## 🏗️ System Architecture Diagram
 
-CivicPulse AI adopts a decoupled client-server architecture. The Streamlit frontend interacts with the FastAPI backend over secure HTTP REST protocols, while the backend mediates all database queries and NLP intelligence evaluations.
+CivicPulse AI adopts a decoupled multi-tier architecture. The Streamlit frontend interacts with the FastAPI backend over secure HTTP REST protocols, while the backend mediates all database persistence, automated AI triage, and status auditing.
 
 ```mermaid
 flowchart TD
-    subgraph Users["Platform Actors"]
-        Student["Complainant / Student / Staff"]
-        Admin["Campus Administrator / Technician"]
+    subgraph UI["🖥️ Streamlit Frontend UI"]
+        direction TB
+        V_Submit["📝 Grievance Submission Portal<br/><code>views/submit_view.py</code>"]
+        V_Track["🔍 Live Complaint Tracker<br/><code>views/tracker_view.py</code>"]
+        V_Admin["🛡️ Admin Operations Control Center<br/><code>views/admin_view.py</code>"]
+        V_Analytics["📊 Analytics & Hotspots Dashboard<br/><code>views/analytics_view.py</code>"]
+        V_Reports["📑 Governance Reports View<br/><code>views/reports_view.py</code>"]
+        API_Client["Unified API Client<br/><code>utils/api_client.py</code>"]
+
+        V_Submit --> API_Client
+        V_Track --> API_Client
+        V_Admin --> API_Client
+        V_Analytics --> API_Client
+        V_Reports --> API_Client
     end
 
-    subgraph Frontend["Streamlit Presentation Tier (Cloud / Local)"]
-        UI_Submit["Submit Grievance View"]
-        UI_Track["Track Status View"]
-        UI_Admin["Admin Operations View"]
-        UI_Analytics["Analytics and Hotspots View"]
-        UI_Reports["Reports and PDF Export View"]
-        API_Client["Unified API Client (utils/api_client.py)"]
-        PDF_Local["ReportLab PDF Generator (modules/report_generator.py)"]
+    subgraph Exports["📤 PDF Reports & CSV Export"]
+        direction TB
+        PDF_Docket["📄 Single Complaint Docket PDF<br/>(ReportLab Vector Document)"]
+        PDF_Summary["📊 Executive Summary Analytics PDF<br/>(ReportLab Governance Briefing)"]
+        CSV_Export["📥 Tabular Grievance Records<br/>(Raw CSV Data Export)"]
     end
 
-    subgraph Backend["FastAPI REST Application Tier (Render / Local)"]
-        API_Router["FastAPI Application (backend/main.py)"]
-        Auth["Constant-Time HMAC Admin Auth Guard"]
-        
-        subgraph NLP_Engines["Intelligence and Triage Engines"]
-            Analyzer["Complaint Analyzer (modules/complaint_analyzer.py)"]
-            Priority["Priority Engine (modules/priority_engine.py)"]
-            Router["Department Router (modules/department_router.py)"]
-            Similarity["Similarity Engine (modules/similarity_engine.py)"]
-        end
-
-        DB_Pool["PostgreSQL Connection Pool (backend/database.py)"]
+    subgraph API["⚡ FastAPI REST Backend Server"]
+        direction TB
+        FastAPI_App["FastAPI Application Server<br/><code>backend/main.py</code><br/>(/complaints, /health, /docs)"]
+        Admin_Auth["Admin Auth Guard<br/>Constant-Time HMAC (X-Admin-Key)"]
+        FastAPI_App --- Admin_Auth
     end
 
-    subgraph Database["Persistence Tier (Neon PostgreSQL)"]
-        PG_DB[("PostgreSQL Database")]
-        T_Comp["Table: complaints"]
-        T_Hist["Table: status_history"]
-        PG_DB --> T_Comp
-        PG_DB --> T_Hist
+    subgraph AI["🤖 AI Triage & Analytics Pipeline"]
+        direction TB
+        AI_Triage["1. AI Triage & Classification<br/><code>modules/complaint_analyzer.py</code><br/>(Domain Taxonomy Matching)"]
+        Priority_Eng["2. Explainable Priority Engine<br/><code>modules/priority_engine.py</code><br/>(Urgency & Safety Hazard Scoring)"]
+        Dept_Router["3. Department Router<br/><code>modules/department_router.py</code><br/>(Division Allocation & Target SLA)"]
+        Duplicate_Detect["4. Duplicate Detection Engine<br/><code>modules/similarity_engine.py</code><br/>(TF-IDF & Cosine Similarity)"]
+
+        AI_Triage --> Priority_Eng
+        Priority_Eng --> Dept_Router
+        Dept_Router --> Duplicate_Detect
     end
 
-    Student --> UI_Submit
-    Student --> UI_Track
-    Admin --> UI_Admin
-    Admin --> UI_Analytics
-    Admin --> UI_Reports
+    subgraph DB["🗄️ PostgreSQL Persistence Tier"]
+        direction TB
+        DB_Pool["Connection Pool (psycopg3)<br/><code>backend/database.py</code>"]
+        T_Complaints[("Table: complaints<br/>(Grievances, Priority, SLAs, Meta)")]
+        T_History[("Table: status_history<br/>(Immutable Chronological Audit Log)")]
+        DB_Pool --> T_Complaints
+        DB_Pool --> T_History
+    end
 
-    UI_Submit --> API_Client
-    UI_Track --> API_Client
-    UI_Admin --> API_Client
-    UI_Analytics --> API_Client
-    UI_Reports --> API_Client
+    %% Main End-to-End Pipeline
+    API_Client -- "HTTP REST (JSON Payloads)" --> FastAPI_App
+    FastAPI_App -- "Intake & Triage" --> AI_Triage
+    Duplicate_Detect -- "Persist Ticket & Similarity" --> DB_Pool
+    FastAPI_App -- "Queries & Status Updates" --> DB_Pool
 
-    UI_Track -.-> PDF_Local
-    UI_Reports -.-> PDF_Local
-
-    API_Client -- "HTTPS / JSON REST" --> API_Router
-    API_Router --> Auth
-    API_Router --> Analyzer
-    API_Router --> Priority
-    API_Router --> Router
-    API_Router --> Similarity
-    API_Router --> DB_Pool
-
-    DB_Pool -- "psycopg3 (sslmode=require)" --> PG_DB
-
-    classDef userNode fill:#EFF6FF,stroke:#2563EB,stroke-width:2px;
-    classDef feNode fill:#F8FAFC,stroke:#64748B,stroke-width:1px;
-    classDef beNode fill:#F0FDF4,stroke:#16A34A,stroke-width:1px;
-    classDef dbNode fill:#FAF5FF,stroke:#9333EA,stroke-width:1px;
-
-    class Student,Admin userNode;
-    class UI_Submit,UI_Track,UI_Admin,UI_Analytics,UI_Reports,API_Client,PDF_Local feNode;
-    class API_Router,Auth,Analyzer,Priority,Router,Similarity,DB_Pool beNode;
-    class PG_DB,T_Comp,T_Hist dbNode;
+    %% Export Generation
+    V_Track -. "Generate Docket" .-> PDF_Docket
+    V_Reports -. "Generate Executive Briefing" .-> PDF_Summary
+    V_Reports -. "Download Filtered Dataset" .-> CSV_Export
 ```
 
 > 📄 For in-depth technical specifications, component descriptions, and query lifecycles, refer to [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
@@ -195,20 +185,20 @@ The diagram below details the sequence of operations executed from the moment a 
 ```mermaid
 flowchart TD
     Start(["User Submits Complaint Form"]) --> ValCheck{"Input Validation<br/>Email and Fields Valid?"}
-    
+
     ValCheck -- No --> ShowErr["Display Form Validation Error"]
     ValCheck -- Yes --> CallAPI["POST /complaints Payload to FastAPI"]
 
     CallAPI --> TriageNode["1. Complaint Analyzer<br/>Taxonomy Keyword and Subcategory Matching"]
     TriageNode --> PrioNode["2. Priority Engine<br/>Scan Hazard Signals to Assign Score and SLA"]
     PrioNode --> RouteNode["3. Department Router<br/>Determine Maintenance Division and Support Contact"]
-    
+
     RouteNode --> FetchHistory["Fetch Existing Complaint Corpus from DB"]
     FetchHistory --> SimNode["4. Similarity Engine<br/>TF-IDF Vectorization and Cosine Similarity Evaluation"]
 
     SimNode --> IDGen["Generate Unique Reference ID: CP-XXXXXXXX"]
     IDGen --> DBInsert["Insert Record into PostgreSQL 'complaints'<br/>Insert Initial Entry into 'status_history'"]
-    
+
     DBInsert --> Resp201["Return HTTP 201 Success Response"]
     Resp201 --> ShowConfirm["Display Interactive AI Triage Card to Citizen"]
 
@@ -364,17 +354,18 @@ API_URL=http://127.0.0.1:8000
 
 > 💡 **Port Consistency:** Port `8000` is the standard local development port configured identically across `.env.example`, `utils/api_client.py`, and `README.md`. If port `8000` is already in use by another service on your machine, you can run Uvicorn on an alternate port (e.g. `--port 8001`) and update `API_URL=http://127.0.0.1:8001` in your `.env` file accordingly.
 
-### 6. Start the FastAPI Backend
-In your active terminal, run:
+### 6. Start the FastAPI Backend (Terminal 1)
+In your first PowerShell terminal, run:
 ```powershell
 uvicorn backend.main:app --reload --port 8000
 ```
 - The backend will automatically verify and initialize database tables (`complaints` and `status_history`).
 - Access the FastAPI root: `http://127.0.0.1:8000`
+- Access Backend Health Probe: `http://127.0.0.1:8000/health`
 - Access Interactive Swagger API Docs: `http://127.0.0.1:8000/docs`
 
-### 7. Start the Streamlit Frontend
-Open a **second PowerShell window**, navigate to the project directory, activate the virtual environment, and launch the frontend:
+### 7. Start the Streamlit Frontend (Terminal 2)
+Open a **second PowerShell terminal**, navigate to the project directory, activate the virtual environment, and launch the frontend:
 ```powershell
 cd "C:\Users\sandhiya B\OneDrive\Desktop\CivicPulse-AI"
 .\venv\Scripts\Activate.ps1
@@ -388,7 +379,7 @@ streamlit run app.py
 
 The FastAPI backend exposes RESTful endpoints supporting JSON serialization, automatic schema generation, and constant-time authentication.
 
-Interactive Swagger documentation is available at `http://127.0.0.1:8000/docs` or the live cloud endpoint:  
+Interactive Swagger documentation is available at `http://127.0.0.1:8000/docs` or the live cloud endpoint:
 🔗 **[https://civicpulse-ai-api-5g8h.onrender.com/docs](https://civicpulse-ai-api-5g8h.onrender.com/docs)**
 
 ### Key Implemented Endpoints
@@ -460,7 +451,7 @@ CivicPulse AI implements defense-in-depth security practices:
 
 ## 🧪 Testing and Validation
 
-The repository contains an automated test suite implemented in `pytest`. All **99 tests** have been executed and verified in the local environment:
+The repository contains an automated test suite implemented in `pytest`. All **101 tests** have been executed and verified in the local environment:
 
 ```powershell
 pytest
@@ -471,26 +462,26 @@ pytest
 ============================= test session starts =============================
 platform win32 -- Python 3.13.1, pytest-9.1.1, pluggy-1.6.0
 rootdir: C:\Users\sandhiya B\OneDrive\Desktop\CivicPulse-AI
-collected 99 items
+collected 101 items
 
-tests/test_admin_status_update.py ..........................             [ 26%]
-tests/test_analyzer.py ......                                            [ 32%]
-tests/test_api_security.py ....................                          [ 52%]
-tests/test_database.py ...                                               [ 55%]
-tests/test_database_init_and_cloud.py ................                   [ 71%]
-tests/test_docket_pdf.py .......                                         [ 78%]
-tests/test_e2e_integration.py .                                          [ 79%]
-tests/test_hero_banner.py ........                                       [ 87%]
-tests/test_priority.py ....                                              [ 91%]
-tests/test_similarity.py ..                                              [ 93%]
+tests/test_admin_status_update.py ............................           [ 27%]
+tests/test_analyzer.py ......                                            [ 33%]
+tests/test_api_security.py ....................                          [ 53%]
+tests/test_database.py ...                                               [ 56%]
+tests/test_database_init_and_cloud.py ................                   [ 72%]
+tests/test_docket_pdf.py .......                                         [ 79%]
+tests/test_e2e_integration.py .                                          [ 80%]
+tests/test_hero_banner.py ........                                       [ 88%]
+tests/test_priority.py ....                                              [ 92%]
+tests/test_similarity.py ..                                              [ 94%]
 tests/test_summary_pdf.py ......                                         [100%]
 
-======================== 99 passed, 1 warning in 6.66s ========================
+======================= 101 passed, 1 warning in 8.51s ========================
 ```
 
 ### Test Coverage Highlights
 - **`test_api_security.py` (20 tests):** Verifies timing-attack resistant key comparison, missing key rejection, malformed headers, and fail-closed behaviors.
-- **`test_admin_status_update.py` (26 tests):** Validates status transitions, invalid status handling, timestamp recording, audit trail inserts, and view rendering.
+- **`test_admin_status_update.py` (28 tests):** Validates status transitions, invalid status handling, timestamp recording, audit trail inserts, case-insensitivity, whitespace trimming, and view rendering.
 - **`test_analyzer.py` & `test_priority.py` (10 tests):** Tests keyword taxonomy classification accuracy, hazard signal detection, and priority scoring.
 - **`test_similarity.py` (2 tests):** Verifies TF-IDF cosine similarity calculations, threshold triggers, and empty corpus handling.
 - **`test_docket_pdf.py` & `test_summary_pdf.py` (13 tests):** Validates ReportLab PDF stream generation, layout bounds, and table flowables.
@@ -509,15 +500,15 @@ The following roadmap items represent architectural improvements planned for fut
 3. **Automated SLA Escalation Engine:** Implement automated cron jobs that flag unresolved grievances approaching SLA breaches and trigger supervisor alerts.
 4. **Interactive Campus GIS Mapping:** Integrate Leaflet/Folium geospatial maps to visualize problem hotspots geographically across campus facility blueprints.
 5. **Multi-Lingual NLP & Image OCR:** Support regional language input translation and optical character recognition (OCR) for attached maintenance photographs.
-6. **Continuous Integration & Deployment (CI/CD):** Add GitHub Actions workflows to automatically run the 99-test validation suite on every pull request.
+6. **Continuous Integration & Deployment (CI/CD):** Add GitHub Actions workflows to automatically run the 101-test validation suite on every pull request.
 
 ---
 
 ## 👩‍💻 Author
 
-**Sandhiya B**  
-*B.E. Electrical and Electronics Engineering Student*  
-GitHub: [@sandhiyabalasubramani](https://github.com/sandhiyabalasubramani)  
+**Sandhiya B**
+*B.E. Electrical and Electronics Engineering Student*
+GitHub: [@sandhiyabalasubramani](https://github.com/sandhiyabalasubramani)
 
 ---
 

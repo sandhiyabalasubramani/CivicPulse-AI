@@ -40,6 +40,7 @@ venv.bak/
 civicpulse.db
 civicpulse_backup_before_postgresql.db
 *backup*.py
+*.bak*
 
 # Build & Packaging
 build/
@@ -71,3 +72,6 @@ Thumbs.db
 
 # Generated PDF Exports & Test Artifacts
 *.pdf
+stress_test*.png
+stress_test_page_*.png
+stress_test*.py
