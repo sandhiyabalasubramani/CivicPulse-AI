@@ -26,6 +26,9 @@ An enterprise-grade grievance management, automated triage, and operational inte
 
 ## 📋 Project Overview
 
+> **Project documentation:** [System Architecture](docs/ARCHITECTURE.md) · [Production Readiness Checklist](docs/PRODUCTION_READINESS.md) · [Test Suite](tests/) · [Environment Template](.env.example)
+
+
 Institutional facility management across universities, colleges, and municipal offices frequently suffers from communication bottlenecks. Grievance reports submitted via disconnected spreadsheets, phone calls, or paper forms often lack categorization, miss urgency assessments, lead to duplicate maintenance dispatches, and provide zero status transparency to citizens.
 
 **CivicPulse AI** solves this operational deficit by uniting modern full-stack web technologies with deterministic NLP intelligence. The platform automates the grievance intake lifecycle:
